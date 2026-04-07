@@ -1,206 +1,221 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+verificarLogin();
 
-$id = $_GET['id'] ?? 0;
-if (!$id) {
-    header('Location: index.php');
-    exit;
-}
+$is_cliente = isCliente();
+$is_empresa = isEmpresa();
 
-// Buscar orçamento
+$id = (int)($_GET['id'] ?? 0);
+if (!$id) { header('Location: index.php'); exit; }
+
 $stmt = $pdo->prepare("
-    SELECT o.*, c.nome as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone, c.endereco as cliente_endereco
-    FROM orcamentos o 
-    LEFT JOIN clientes c ON c.id = o.cliente_id 
-    WHERE o.id = ?
-");
+    SELECT o.*, c.nome AS cliente_nome, c.email AS cliente_email,
+           c.telefone AS cliente_telefone, c.endereco AS cliente_endereco,
+           e.nome_empresa, e.telefone AS empresa_tel, e.email AS empresa_email
+    FROM orcamentos o
+    LEFT JOIN clientes c ON c.id = o.cliente_id
+    LEFT JOIN empresas e ON e.id = o.empresa_id
+    WHERE o.id = ?");
 $stmt->execute([$id]);
-$orcamento = $stmt->fetch();
+$orc = $stmt->fetch();
+if (!$orc) { header('Location: index.php?msg='.urlencode('Orçamento não encontrado').'&type=error'); exit; }
 
-if (!$orcamento) {
-    header('Location: index.php?msg=' . urlencode('Orçamento não encontrado') . '&type=error');
-    exit;
+// Verificar permissão de acesso
+if ($is_cliente && $orc['cliente_id'] != $_SESSION['cliente_id']) {
+    header('Location: index.php?msg='.urlencode('Acesso negado').'&type=error'); exit;
+}
+if ($is_empresa && $orc['empresa_id'] != $_SESSION['empresa_id']) {
+    header('Location: index.php?msg='.urlencode('Acesso negado').'&type=error'); exit;
 }
 
-// Buscar itens do orçamento
-$itensStmt = $pdo->prepare("
-    SELECT oi.*, s.nome as servico_nome, s.descricao as servico_descricao
-    FROM orcamento_itens oi
-    JOIN servicos s ON s.id = oi.servico_id
-    WHERE oi.orcamento_id = ?
-");
-$itensStmt->execute([$id]);
-$itens = $itensStmt->fetchAll();
+$itens = $pdo->prepare("
+    SELECT oi.*, s.nome AS servico_nome, s.descricao AS servico_desc
+    FROM orcamento_itens oi JOIN servicos s ON s.id = oi.servico_id
+    WHERE oi.orcamento_id = ?");
+$itens->execute([$id]);
+$itens = $itens->fetchAll();
 
-$statusColors = [
-    'pendente' => 'warning',
-    'aprovado' => 'success',
-    'rejeitado' => 'danger',
-    'expirado' => 'secondary'
-];
-
-$statusLabels = [
-    'pendente' => 'Pendente',
-    'aprovado' => 'Aprovado',
-    'rejeitado' => 'Rejeitado',
-    'expirado' => 'Expirado'
-];
-
-// Processar mudança de status
+// Alterar status — empresa pode aprovar/rejeitar, cliente pode cancelar se pendente
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status'])) {
     $novoStatus = $_POST['status'];
-    $update = $pdo->prepare("UPDATE orcamentos SET status = ? WHERE id = ?");
-    if ($update->execute([$novoStatus, $id])) {
-        header('Location: view.php?id=' . $id . '&msg=' . urlencode('Status atualizado com sucesso!') . '&type=success');
-        exit;
+    $allowed    = ['pendente','aprovado','rejeitado','concluido','expirado'];
+    if ($is_cliente) $allowed = ['rejeitado']; // cliente só pode rejeitar (cancelar)
+    if (in_array($novoStatus, $allowed)) {
+        $pdo->prepare("UPDATE orcamentos SET status=? WHERE id=?")->execute([$novoStatus, $id]);
+        header('Location: view.php?id='.$id.'&msg='.urlencode('Status atualizado!').'&type=success'); exit;
     }
 }
+
+$back_url = $is_cliente ? 'index.php' : ($is_empresa ? 'index.php' : 'index.php');
 ?>
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Orçamento #<?= $orcamento['id'] ?></title>
-    <link rel="stylesheet" href="../css/estilo.css">
-    <style>
-        .orcamento-header {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .status-select {
-            display: inline-block;
-            margin-left: 10px;
-        }
-        .total-final {
-            font-size: 24px;
-            font-weight: bold;
-            color: #28a745;
-            text-align: right;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-        }
-        @media print {
-            .no-print {
-                display: none;
-            }
-            .container {
-                box-shadow: none;
-                padding: 0;
-            }
-        }
-    </style>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Orçamento #<?=$orc['id']?> — ServiceHub</title>
+  <link rel="stylesheet" href="../css/estilo.css">
+  <style>
+    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%);border-bottom:1px solid rgba(201,168,76,.2);position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
+    .dash-nav .inner { max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px; }
+    .nav-items { display:flex;gap:6px;flex-wrap:wrap;align-items:center; }
+    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--radius-sm);transition:all var(--transition);text-decoration:none; }
+    .nav-items a:hover { color:#fff;background:rgba(201,168,76,.18); }
+    @media print { .dash-nav, .main-header, .no-print { display:none!important; } body { background:#fff; } }
+  </style>
 </head>
 <body>
-   <header class="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <h1>ServiceHub</h1>
-            <p>Gestão de Serviços e Orçamentos</p>
-        </div>
-        <nav class="main-nav">
-            <ul>
-                <li><a href="../index.php">Início</a></li>
-                <li><a href="../servicos/index.php">Serviços</a></li>
-                <li><a href="../clientes/index.php">Clientes</a></li>
-                <li><a href="../orcamentos/index.php">Orçamentos</a></li>
-                <li><a href="../relatorios/index.php">Relatórios</a></li>
-            </ul>
-        </nav>
+
+<?php if ($is_cliente || $is_empresa): ?>
+<nav class="dash-nav no-print">
+  <div class="inner">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1></div>
+    <div class="nav-items">
+      <?php if ($is_cliente): ?>
+        <a href="../dashboard_cliente.php">Início</a>
+        <a href="../clientes/empresas.php">Empresas</a>
+      <?php else: ?>
+        <a href="../dashboard_empresa.php">Início</a>
+      <?php endif; ?>
+      <a href="index.php">Orçamentos</a>
+      <a href="../logout.php">Sair</a>
     </div>
+  </div>
+</nav>
+<?php else: ?>
+<header class="main-header no-print">
+  <div class="header-content">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><p>Gestão de Serviços &amp; Orçamentos</p></div>
+    <nav class="main-nav"><ul>
+      <li><a href="../index.php">Início</a></li>
+      <li><a href="../clientes/index.php">Clientes</a></li>
+      <li><a href="index.php" class="active">Orçamentos</a></li>
+      <li><a href="../relatorios/index.php">Relatórios</a></li>
+    </ul></nav>
+  </div>
 </header>
-    <div class="container">
-        <div class="no-print" style="margin-bottom: 20px;">
-            <a href="index.php" class="btn">← Voltar</a>
-            <a href="edit.php?id=<?= $orcamento['id'] ?>" class="btn btn-warning">✏️ Editar</a>
-            <button onclick="window.print()" class="btn">🖨️ Imprimir</button>
-            <?php if ($orcamento['status'] == 'pendente'): ?>
-                <a href="gerar_pdf.php?id=<?= $orcamento['id'] ?>" class="btn">📄 Gerar PDF</a>
-            <?php endif; ?>
-        </div>
+<?php endif; ?>
 
-        <?php if (isset($_GET['msg'])): ?>
-            <?php echo showMessage(urldecode($_GET['msg']), $_GET['type'] ?? 'success'); ?>
-        <?php endif; ?>
-
-        <div class="orcamento-header">
-            <h2>Orçamento #<?= $orcamento['id'] ?></h2>
-            <div style="display: flex; justify-content: space-between;">
-                <div>
-                    <strong>Data:</strong> <?= formatDate($orcamento['data_orcamento']) ?><br>
-                    <strong>Validade:</strong> <?= formatDate($orcamento['data_validade']) ?>
-                </div>
-                <div class="no-print">
-                    <strong>Status:</strong>
-                    <span class="badge badge-<?= $statusColors[$orcamento['status']] ?>">
-                        <?= $statusLabels[$orcamento['status']] ?>
-                    </span>
-                    
-                    <?php if ($orcamento['status'] == 'pendente'): ?>
-                    <form method="post" style="display: inline-block;" class="status-select">
-                        <select name="status" onchange="this.form.submit()">
-                            <option value="">Alterar status</option>
-                            <option value="aprovado">Aprovar</option>
-                            <option value="rejeitado">Rejeitar</option>
-                            <option value="expirado">Expirar</option>
-                        </select>
-                    </form>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="cliente-info" style="margin-bottom: 30px;">
-            <h3>Dados do Cliente</h3>
-            <p><strong>Nome:</strong> <?= htmlspecialchars($orcamento['cliente_nome'] ?? 'Cliente não informado') ?></p>
-            <?php if ($orcamento['cliente_email']): ?>
-                <p><strong>Email:</strong> <?= htmlspecialchars($orcamento['cliente_email']) ?></p>
-            <?php endif; ?>
-            <?php if ($orcamento['cliente_telefone']): ?>
-                <p><strong>Telefone:</strong> <?= htmlspecialchars($orcamento['cliente_telefone']) ?></p>
-            <?php endif; ?>
-            <?php if ($orcamento['cliente_endereco']): ?>
-                <p><strong>Endereço:</strong> <?= htmlspecialchars($orcamento['cliente_endereco']) ?></p>
-            <?php endif; ?>
-        </div>
-
-        <h3>Serviços Solicitados</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Serviço</th>
-                    <th>Descrição</th>
-                    <th>Quantidade</th>
-                    <th>Valor Unitário</th>
-                    <th>Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($itens as $item): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($item['servico_nome']) ?></td>
-                        <td><?= htmlspecialchars(substr($item['servico_descricao'], 0, 50)) ?>...</td>
-                        <td><?= $item['quantidade'] ?></td>
-                        <td>R$ <?= number_format($item['valor_unitario'], 2, ',', '.') ?></td>
-                        <td>R$ <?= number_format($item['subtotal'], 2, ',', '.') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-
-        <div class="total-final">
-            Total: R$ <?= number_format($orcamento['valor_total'], 2, ',', '.') ?>
-        </div>
-
-        <?php if ($orcamento['observacoes']): ?>
-            <div class="observacoes" style="margin-top: 30px;">
-                <h3>Observações</h3>
-                <p><?= nl2br(htmlspecialchars($orcamento['observacoes'])) ?></p>
-            </div>
-        <?php endif; ?>
+<div class="container">
+  <div class="no-print page-title-row">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <a href="<?= $back_url ?>" class="btn btn-ghost">← Voltar</a>
+      <h1 style="margin:0;">Orçamento #<?=$orc['id']?></h1>
+      <?= statusBadge($orc['status']) ?>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <?php if (!$is_cliente): ?>
+        <a href="edit.php?id=<?=$orc['id']?>" class="btn btn-warning">Editar</a>
+      <?php endif; ?>
+      <button onclick="window.print()" class="btn btn-ghost">🖨 Imprimir</button>
+    </div>
+  </div>
+
+  <?php if (isset($_GET['msg'])): echo showMessage(htmlspecialchars(urldecode($_GET['msg'])), $_GET['type'] ?? 'success'); endif; ?>
+
+  <div class="detail-header">
+    <div>
+      <h2>Orçamento #<?=$orc['id']?></h2>
+      <p>Emitido em <?= formatDate($orc['data_orcamento']) ?><?= $orc['data_validade'] ? ' · Válido até '.formatDate($orc['data_validade']) : '' ?></p>
+    </div>
+    <?php if ($orc['status'] === 'pendente'): ?>
+    <form method="post" class="no-print" style="display:flex;gap:8px;align-items:center;">
+      <select name="status" class="form-control" style="width:auto;background:#1a2d42;color:#fff;border-color:rgba(255,255,255,.15);">
+        <option value="">Alterar status…</option>
+        <?php if ($is_empresa || !$is_cliente): ?>
+          <option value="aprovado">✅ Aprovar</option>
+          <option value="rejeitado">✕ Rejeitar</option>
+          <option value="expirado">⌛ Expirar</option>
+        <?php endif; ?>
+        <?php if ($is_cliente): ?>
+          <option value="rejeitado">Cancelar solicitação</option>
+        <?php endif; ?>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+    </form>
+    <?php elseif ($orc['status'] === 'aprovado' && ($is_empresa || !$is_cliente)): ?>
+    <form method="post" class="no-print" style="display:flex;gap:8px;align-items:center;">
+      <select name="status" class="form-control" style="width:auto;background:#1a2d42;color:#fff;border-color:rgba(255,255,255,.15);">
+        <option value="">Alterar status…</option>
+        <option value="concluido">🏁 Concluir</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+    </form>
+    <?php endif; ?>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="info-label">Cliente</div>
+      <div class="info-value"><?= htmlspecialchars($orc['cliente_nome'] ?? '—') ?></div>
+    </div>
+    <?php if ($orc['cliente_email']): ?>
+    <div class="info-item">
+      <div class="info-label">E-mail do Cliente</div>
+      <div class="info-value"><?= htmlspecialchars($orc['cliente_email']) ?></div>
+    </div>
+    <?php endif; ?>
+    <?php if ($orc['cliente_telefone']): ?>
+    <div class="info-item">
+      <div class="info-label">Telefone do Cliente</div>
+      <div class="info-value"><?= htmlspecialchars($orc['cliente_telefone']) ?></div>
+    </div>
+    <?php endif; ?>
+    <?php if ($orc['nome_empresa']): ?>
+    <div class="info-item">
+      <div class="info-label">Empresa Prestadora</div>
+      <div class="info-value"><?= htmlspecialchars($orc['nome_empresa']) ?></div>
+    </div>
+    <?php endif; ?>
+    <div class="info-item">
+      <div class="info-label">Status</div>
+      <div class="info-value"><?= statusBadge($orc['status']) ?></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><h3>Serviços Solicitados</h3></div>
+    <div class="table-wrap" style="border:none;border-radius:0;box-shadow:none;">
+      <table>
+        <thead><tr><th>Serviço</th><th>Descrição</th><th>Qtd</th><th>Valor Unit.</th><th>Subtotal</th></tr></thead>
+        <tbody>
+          <?php foreach ($itens as $it): ?>
+          <tr>
+            <td><strong><?= htmlspecialchars($it['servico_nome']) ?></strong></td>
+            <td style="color:var(--text-muted);font-size:13px;"><?= $it['servico_desc'] ? htmlspecialchars(mb_substr($it['servico_desc'],0,60)).'…' : '—' ?></td>
+            <td><?= $it['quantidade'] ?></td>
+            <td><?= formatMoney($it['valor_unitario']) ?></td>
+            <td><strong><?= formatMoney($it['subtotal']) ?></strong></td>
+          </tr>
+          <?php endforeach; ?>
+          <?php if (empty($itens)): ?>
+          <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum item registrado.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      <div class="total-bar">
+        <span class="total-label">Total do Orçamento</span>
+        <span class="total-value"><?= formatMoney($orc['valor_total']) ?></span>
+      </div>
+    </div>
+  </div>
+
+  <?php if ($orc['observacoes']): ?>
+  <div class="card">
+    <div class="card-header"><h3>Observações</h3></div>
+    <div class="card-body">
+      <p style="white-space:pre-line;font-size:14px;"><?= htmlspecialchars($orc['observacoes']) ?></p>
+    </div>
+  </div>
+  <?php endif; ?>
+</div>
+
+<footer style="background:var(--navy);color:var(--slate);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
+  © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
+</footer>
 </body>
 </html>

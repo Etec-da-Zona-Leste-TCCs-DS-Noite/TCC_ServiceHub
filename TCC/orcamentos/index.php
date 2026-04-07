@@ -1,319 +1,235 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+verificarLogin();
 
-// Paginação
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = 10;
+$is_cliente = isCliente();
+$is_empresa = isEmpresa();
+
+$page   = max(1, (int)($_GET['page'] ?? 1));
+$limit  = 10;
 $offset = ($page - 1) * $limit;
 
-// Filtros
-$status_filtro = $_GET['status'] ?? '';
-$cliente_filtro = $_GET['cliente'] ?? '';
-$data_inicio = $_GET['data_inicio'] ?? '';
-$data_fim = $_GET['data_fim'] ?? '';
+$status_filtro  = $_GET['status']      ?? '';
+$data_inicio    = $_GET['data_inicio'] ?? '';
+$data_fim       = $_GET['data_fim']    ?? '';
 
-// Montar query com filtros
-$sql = "SELECT o.*, c.nome as cliente_nome 
-        FROM orcamentos o 
-        LEFT JOIN clientes c ON c.id = o.cliente_id 
-        WHERE 1=1";
+// Base query — sempre filtrada pelo usuário logado
+$sql    = "SELECT o.*, c.nome AS cliente_nome, e.nome_empresa FROM orcamentos o
+           LEFT JOIN clientes c ON c.id = o.cliente_id
+           LEFT JOIN empresas e ON e.id = o.empresa_id
+           WHERE 1=1";
 $params = [];
 
-if ($status_filtro) {
-    $sql .= " AND o.status = ?";
-    $params[] = $status_filtro;
-}
-
-if ($cliente_filtro) {
+if ($is_cliente) {
     $sql .= " AND o.cliente_id = ?";
-    $params[] = $cliente_filtro;
+    $params[] = $_SESSION['cliente_id'];
+} elseif ($is_empresa) {
+    $sql .= " AND o.empresa_id = ?";
+    $params[] = $_SESSION['empresa_id'];
 }
 
-if ($data_inicio) {
-    $sql .= " AND o.data_orcamento >= ?";
-    $params[] = $data_inicio;
-}
+if ($status_filtro) { $sql .= " AND o.status = ?"; $params[] = $status_filtro; }
+if ($data_inicio)   { $sql .= " AND o.data_orcamento >= ?"; $params[] = $data_inicio; }
+if ($data_fim)      { $sql .= " AND o.data_orcamento <= ?"; $params[] = $data_fim; }
 
-if ($data_fim) {
-    $sql .= " AND o.data_orcamento <= ?";
-    $params[] = $data_fim;
-}
-
-// Contar total para paginação
-$countSql = str_replace("SELECT o.*, c.nome as cliente_nome", "SELECT COUNT(*)", $sql);
-$countStmt = $pdo->prepare($countSql);
+$countStmt = $pdo->prepare(str_replace(
+    "SELECT o.*, c.nome AS cliente_nome, e.nome_empresa",
+    "SELECT COUNT(*)", $sql
+));
 $countStmt->execute($params);
-$total = $countStmt->fetchColumn();
-$totalPages = ceil($total / $limit);
+$total      = $countStmt->fetchColumn();
+$totalPages = (int)ceil($total / $limit);
 
-// Adicionar ordenação e paginação
-$sql .= " ORDER BY o.id DESC LIMIT :limit OFFSET :offset";
+$sql .= " ORDER BY o.id DESC LIMIT :lim OFFSET :off";
 $stmt = $pdo->prepare($sql);
-
-// Bind dos parâmetros
-foreach ($params as $key => $value) {
-    $stmt->bindValue($key + 1, $value);
-}
-$stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-$stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+foreach ($params as $k => $v) $stmt->bindValue($k + 1, $v);
+$stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':off', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $orcamentos = $stmt->fetchAll();
 
-// Buscar clientes para o filtro
-$clientes = $pdo->query("SELECT id, nome FROM clientes ORDER BY nome")->fetchAll();
+// Totais do filtro atual
+$totalValor = $totalPendente = $totalAprovado = 0;
+foreach ($orcamentos as $o) {
+    $totalValor    += $o['valor_total'];
+    if ($o['status'] === 'pendente') $totalPendente  += $o['valor_total'];
+    if ($o['status'] === 'aprovado') $totalAprovado  += $o['valor_total'];
+}
 
-$statusColors = [
-    'pendente' => 'warning',
-    'aprovado' => 'success',
-    'rejeitado' => 'danger',
-    'expirado' => 'secondary'
-];
-
-$statusLabels = [
-    'pendente' => 'Pendente',
-    'aprovado' => 'Aprovado',
-    'rejeitado' => 'Rejeitado',
-    'expirado' => 'Expirado'
-];
+$back_url = $is_cliente ? '../dashboard_cliente.php' : ($is_empresa ? '../dashboard_empresa.php' : '../index.php');
 ?>
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>ServiceHub - Orçamentos</title>
-    <link rel="stylesheet" href="../css/estilo.css">
-    <style>
-        .badge-warning { background: #ffc107; color: #000; padding: 5px 10px; border-radius: 4px; font-size: 12px; display: inline-block; }
-        .badge-success { background: #28a745; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; display: inline-block; }
-        .badge-danger { background: #dc3545; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; display: inline-block; }
-        .badge-secondary { background: #6c757d; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; display: inline-block; }
-        
-        .filtros {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .filtros .form-group {
-            display: inline-block;
-            margin-right: 15px;
-            margin-bottom: 10px;
-        }
-        
-        .filtros label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 5px;
-            color: #666;
-        }
-        
-        .btn-limpar {
-            background: #6c757d;
-            vertical-align: bottom;
-            margin-top: 24px;
-        }
-        
-        .btn-limpar:hover {
-            background: #5a6268;
-        }
-        
-        .total-resumo {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .total-resumo .valor {
-            font-size: 24px;
-            font-weight: bold;
-        }
-        
-        @media (max-width: 768px) {
-            .filtros .form-group {
-                display: block;
-                margin-right: 0;
-            }
-            
-            .btn-limpar {
-                margin-top: 0;
-            }
-        }
-    </style>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Orçamentos — ServiceHub</title>
+  <link rel="stylesheet" href="../css/estilo.css">
+  <style>
+    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%);border-bottom:1px solid rgba(201,168,76,.2);position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
+    .dash-nav .inner { max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px; }
+    .nav-items { display:flex;gap:6px;flex-wrap:wrap;align-items:center; }
+    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--radius-sm);transition:all var(--transition);text-decoration:none; }
+    .nav-items a:hover { color:#fff;background:rgba(201,168,76,.18); }
+  </style>
 </head>
 <body>
-    
+
+<?php if ($is_cliente || $is_empresa): ?>
+<nav class="dash-nav">
+  <div class="inner">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1></div>
+    <div class="nav-items">
+      <a href="<?= $back_url ?>">Início</a>
+      <?php if ($is_cliente): ?>
+        <a href="../clientes/empresas.php">Empresas</a>
+      <?php else: ?>
+        <a href="../empresas/meus_servicos.php">Meus Serviços</a>
+        <a href="../relatorios/index.php">Relatórios</a>
+      <?php endif; ?>
+      <a href="index.php" style="color:#fff;background:rgba(201,168,76,.18);">Orçamentos</a>
+      <a href="../logout.php">Sair</a>
+    </div>
+  </div>
+</nav>
+<?php else: ?>
 <header class="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <h1>ServiceHub</h1>
-            <p>Gestão de Serviços e Orçamentos</p>
-        </div>
-        <nav class="main-nav">
-            <ul>
-                <li><a href="../index.php">Início</a></li>
-                <li><a href="../servicos/index.php">Serviços</a></li>
-                <li><a href="../clientes/index.php">Clientes</a></li>
-                <li><a href="../orcamentos/index.php">Orçamentos</a></li>
-                <li><a href="../relatorios/index.php">Relatórios</a></li>
-            </ul>
-        </nav>
-    </div>
+  <div class="header-content">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><p>Gestão de Serviços &amp; Orçamentos</p></div>
+    <nav class="main-nav"><ul>
+      <li><a href="../index.php">Início</a></li>
+      <li><a href="../servicos/index.php">Serviços</a></li>
+      <li><a href="../clientes/index.php">Clientes</a></li>
+      <li><a href="index.php" class="active">Orçamentos</a></li>
+      <li><a href="../relatorios/index.php">Relatórios</a></li>
+    </ul></nav>
+  </div>
 </header>
-    <div class="container">
-        <h1>💰 Orçamentos</h1>
-        <div class="text-right mb-3">
-            <a href="create.php" class="btn">➕ Novo Orçamento</a>
-            <a href="../servicos/index.php" class="btn">📋 Serviços</a>
-            <a href="../clientes/index.php" class="btn">👥 Clientes</a>
-            <a href="../relatorios/index.php" class="btn">📊 Relatórios</a>
-            <a href="../index.php" class="btn">🏠 Início</a>
-        </div>
+<?php endif; ?>
 
-        <?php if (isset($_GET['msg'])): ?>
-            <?php echo showMessage(urldecode($_GET['msg']), $_GET['type'] ?? 'success'); ?>
-        <?php endif; ?>
-        
-        <!-- Filtros -->
-        <div class="filtros">
-            <form method="get" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status" class="form-control">
-                        <option value="">Todos</option>
-                        <option value="pendente" <?= $status_filtro == 'pendente' ? 'selected' : '' ?>>Pendente</option>
-                        <option value="aprovado" <?= $status_filtro == 'aprovado' ? 'selected' : '' ?>>Aprovado</option>
-                        <option value="rejeitado" <?= $status_filtro == 'rejeitado' ? 'selected' : '' ?>>Rejeitado</option>
-                        <option value="expirado" <?= $status_filtro == 'expirado' ? 'selected' : '' ?>>Expirado</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Cliente</label>
-                    <select name="cliente" class="form-control">
-                        <option value="">Todos</option>
-                        <?php foreach ($clientes as $cli): ?>
-                            <option value="<?= $cli['id'] ?>" <?= $cliente_filtro == $cli['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cli['nome']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Data Início</label>
-                    <input type="date" name="data_inicio" class="form-control" value="<?= $data_inicio ?>">
-                </div>
-                
-                <div class="form-group">
-                    <label>Data Fim</label>
-                    <input type="date" name="data_fim" class="form-control" value="<?= $data_fim ?>">
-                </div>
-                
-                <div class="form-group">
-                    <button type="submit" class="btn">🔍 Filtrar</button>
-                    <a href="index.php" class="btn btn-limpar">🗑️ Limpar</a>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Resumo dos totais -->
-        <?php
-        // Calcular totais dos orçamentos filtrados
-        $totalValor = 0;
-        $totalPendente = 0;
-        $totalAprovado = 0;
-        
-        foreach ($orcamentos as $orc) {
-            $totalValor += $orc['valor_total'];
-            if ($orc['status'] == 'pendente') $totalPendente += $orc['valor_total'];
-            if ($orc['status'] == 'aprovado') $totalAprovado += $orc['valor_total'];
-        }
-        ?>
-        
-        <div class="total-resumo">
-            <div>
-                <strong>Total dos Orçamentos:</strong> <?= count($orcamentos) ?> orçamento(s)
-                <br>
-                <small>Pendente: R$ <?= number_format($totalPendente, 2, ',', '.') ?> | Aprovado: R$ <?= number_format($totalAprovado, 2, ',', '.') ?></small>
-            </div>
-            <div class="valor">
-                R$ <?= number_format($totalValor, 2, ',', '.') ?>
-            </div>
-        </div>
+<div class="container">
+  <div class="page-title-row">
+    <h1><?= $is_cliente ? 'Meus Orçamentos' : 'Orçamentos' ?></h1>
+    <?php if ($is_cliente): ?>
+      <a href="../clientes/empresas.php" class="btn btn-primary">+ Solicitar Orçamento</a>
+    <?php else: ?>
+      <a href="create.php" class="btn btn-primary">+ Novo Orçamento</a>
+    <?php endif; ?>
+  </div>
 
-        <!-- Tabela de orçamentos -->
-         <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Data</th>
-                    <th>Validade</th>
-                    <th>Valor Total</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($orcamentos as $orc): ?>
-                    <tr>
-                        <td><?= $orc['id'] ?></td>
-                        <td><?= htmlspecialchars($orc['cliente_nome'] ?? 'Cliente não informado') ?></td>
-                        <td><?= formatDate($orc['data_orcamento']) ?></td>
-                        <td><?= $orc['data_validade'] ? formatDate($orc['data_validade']) : '-' ?></td>
-                        <td><strong>R$ <?= number_format($orc['valor_total'], 2, ',', '.') ?></strong></td>
-                        <td>
-                            <span class="badge-<?= $statusColors[$orc['status']] ?>">
-                                <?= $statusLabels[$orc['status']] ?>
-                            </span>
-                        </td>
-                        <td>
-                            <a href="view.php?id=<?= $orc['id'] ?>" class="btn" style="padding: 4px 8px; font-size: 12px;">👁️ Ver</a>
-                            <a href="edit.php?id=<?= $orc['id'] ?>" class="btn btn-warning" style="padding: 4px 8px; font-size: 12px;">✏️ Editar</a>
-                            <a href="delete.php?id=<?= $orc['id'] ?>" class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="return confirm('Tem certeza que deseja excluir este orçamento?')">🗑️ Excluir</a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (empty($orcamentos)): ?>
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px;">
-                            <p>Nenhum orçamento encontrado.</p>
-                            <a href="create.php" class="btn">➕ Criar primeiro orçamento</a>
-                        </td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+  <?php if (isset($_GET['msg'])): echo showMessage(htmlspecialchars(urldecode($_GET['msg'])), $_GET['type'] ?? 'success'); endif; ?>
 
-        <!-- Paginação -->
-        <?php if ($totalPages > 1): ?>
-            <ul class="pagination">
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                    <li class="<?= ($i == $page) ? 'active' : '' ?>">
-                        <?php if ($i == $page): ?>
-                            <span><?= $i ?></span>
-                        <?php else: ?>
-                            <a href="?page=<?= $i ?>&status=<?= urlencode($status_filtro) ?>&cliente=<?= urlencode($cliente_filtro) ?>&data_inicio=<?= urlencode($data_inicio) ?>&data_fim=<?= urlencode($data_fim) ?>">
-                                <?= $i ?>
-                            </a>
-                        <?php endif; ?>
-                    </li>
-                <?php endfor; ?>
-            </ul>
-        <?php endif; ?>
-        
-        <!-- Botões de ação rápida -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
-            <a href="../relatorios/index.php" class="btn">📊 Ver Relatórios Completos</a>
-            <a href="create.php" class="btn" style="background: #28a745;">➕ Novo Orçamento</a>
-        </div>
+  <div class="summary-ribbon">
+    <div class="ribbon-item">
+      <div class="ribbon-val"><?= $total ?></div>
+      <div class="ribbon-lbl">Total de registros</div>
     </div>
+    <div class="ribbon-item">
+      <div class="ribbon-val"><?= formatMoney($totalValor) ?></div>
+      <div class="ribbon-lbl">Valor total</div>
+    </div>
+    <div class="ribbon-item">
+      <div class="ribbon-val" style="color:#fbbf24;"><?= formatMoney($totalPendente) ?></div>
+      <div class="ribbon-lbl">Pendente</div>
+    </div>
+    <div class="ribbon-item">
+      <div class="ribbon-val" style="color:#6ee7b7;"><?= formatMoney($totalAprovado) ?></div>
+      <div class="ribbon-lbl">Aprovado</div>
+    </div>
+  </div>
+
+  <form class="filter-bar" method="get">
+    <div class="form-group">
+      <label>Status</label>
+      <select name="status" class="form-control">
+        <option value="">Todos</option>
+        <?php foreach (['pendente','aprovado','rejeitado','concluido','expirado'] as $s): ?>
+        <option value="<?=$s?>" <?=$status_filtro===$s?'selected':''?>><?= ucfirst($s) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Data início</label>
+      <input type="date" name="data_inicio" class="form-control" value="<?= $data_inicio ?>">
+    </div>
+    <div class="form-group">
+      <label>Data fim</label>
+      <input type="date" name="data_fim" class="form-control" value="<?= $data_fim ?>">
+    </div>
+    <div style="display:flex;gap:8px;padding-bottom:1px;">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="index.php" class="btn btn-ghost">Limpar</a>
+    </div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <?php if (!$is_cliente): ?><th>Cliente</th><?php endif; ?>
+        <?php if (!$is_empresa): ?><th>Empresa</th><?php endif; ?>
+        <th>Data</th><th>Validade</th><th>Valor Total</th><th>Status</th><th>Ações</th>
+      </tr></thead>
+      <tbody>
+        <?php foreach ($orcamentos as $o): ?>
+        <tr>
+          <td style="color:var(--text-muted);font-size:12px;">#<?= $o['id'] ?></td>
+          <?php if (!$is_cliente): ?>
+          <td><strong><?= htmlspecialchars($o['cliente_nome'] ?? '—') ?></strong></td>
+          <?php endif; ?>
+          <?php if (!$is_empresa): ?>
+          <td><?= htmlspecialchars($o['nome_empresa'] ?? '—') ?></td>
+          <?php endif; ?>
+          <td><?= formatDate($o['data_orcamento']) ?></td>
+          <td><?= formatDate($o['data_validade']) ?></td>
+          <td><strong style="color:var(--teal);"><?= formatMoney($o['valor_total']) ?></strong></td>
+          <td><?= statusBadge($o['status']) ?></td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <a href="view.php?id=<?=$o['id']?>" class="btn btn-sm">Ver</a>
+              <?php if (!$is_cliente): ?>
+              <a href="edit.php?id=<?=$o['id']?>" class="btn btn-sm btn-warning">Editar</a>
+              <a href="delete.php?id=<?=$o['id']?>" class="btn btn-sm btn-danger"
+                 onclick="return confirm('Excluir este orçamento?')">Excluir</a>
+              <?php endif; ?>
+            </div>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+        <?php if (empty($orcamentos)): ?>
+        <tr><td colspan="8">
+          <div class="empty-state">
+            <span class="empty-icon">💰</span>
+            <h3>Nenhum orçamento encontrado</h3>
+            <?php if ($is_cliente): ?>
+              <p>Explore as empresas disponíveis e solicite seu primeiro orçamento!</p>
+              <a href="../clientes/empresas.php" class="btn btn-primary">Ver Empresas</a>
+            <?php else: ?>
+              <p>Crie o primeiro orçamento agora mesmo.</p>
+              <a href="create.php" class="btn btn-primary">+ Novo Orçamento</a>
+            <?php endif; ?>
+          </div>
+        </td></tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <?php if ($totalPages > 1): ?>
+  <ul class="pagination">
+    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+    <li class="<?=$i==$page?'active':''?>">
+      <?= $i==$page?"<span>$i</span>":"<a href='?page=$i&status=".urlencode($status_filtro)."&data_inicio=".urlencode($data_inicio)."&data_fim=".urlencode($data_fim)."'>$i</a>" ?>
+    </li>
+    <?php endfor; ?>
+  </ul>
+  <?php endif; ?>
+</div>
+
+<footer style="background:var(--navy);color:var(--slate);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
+  © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
+</footer>
 </body>
 </html>

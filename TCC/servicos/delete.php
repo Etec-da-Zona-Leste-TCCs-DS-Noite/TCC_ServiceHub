@@ -1,15 +1,11 @@
 <?php
 require_once '../includes/config.php';
-
-$id = $_GET['id'] ?? 0;
-
+$id = (int)($_GET['id'] ?? 0);
 if ($id) {
-    $stmt = $pdo->prepare("DELETE FROM servicos WHERE id = ?");
-    if ($stmt->execute([$id])) {
-        header('Location: index.php?msg=' . urlencode('Serviço excluído com sucesso!') . '&type=success');
-    } else {
-        header('Location: index.php?msg=' . urlencode('Erro ao excluir serviço') . '&type=error');
-    }
+    $stmt = $pdo->prepare("DELETE FROM servicos WHERE id=?");
+    $msg  = $stmt->execute([$id]) ? urlencode('Serviço excluído com sucesso!') : urlencode('Erro ao excluir serviço.');
+    $type = $stmt->rowCount() ? 'success' : 'error';
+    header("Location: index.php?msg=$msg&type=$type");
 } else {
     header('Location: index.php');
 }

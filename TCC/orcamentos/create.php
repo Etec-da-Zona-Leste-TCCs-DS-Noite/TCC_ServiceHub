@@ -1,298 +1,274 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+verificarLogin();
 
-$clientes = $pdo->query("SELECT * FROM clientes ORDER BY nome")->fetchAll();
-$servicos = $pdo->query("SELECT * FROM servicos WHERE status = 1 ORDER BY nome")->fetchAll();
+$is_cliente  = isCliente();
+$is_empresa  = isEmpresa();
+
+$pre_servico_id = (int)($_GET['servico_id'] ?? 0);
+$pre_empresa_id = (int)($_GET['empresa_id'] ?? 0);
+
+if ($is_cliente) {
+    $clientes = [];
+    $cliente_id_fixo = $_SESSION['cliente_id'];
+} else {
+    $clientes = $pdo->query("SELECT * FROM clientes ORDER BY nome")->fetchAll();
+    $cliente_id_fixo = null;
+}
+
+$servicos = $pdo->query("SELECT s.*, e.nome_empresa FROM servicos s JOIN empresas e ON e.id = s.empresa_id WHERE s.status=1 ORDER BY e.nome_empresa, s.nome")->fetchAll();
 
 $erros = [];
-$cliente_id = '';
+$cliente_id     = $cliente_id_fixo ?? '';
 $data_orcamento = date('Y-m-d');
-$data_validade = date('Y-m-d', strtotime('+30 days'));
-$observacoes = '';
+$data_validade  = date('Y-m-d', strtotime('+30 days'));
+$observacoes    = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cliente_id = $_POST['cliente_id'] ?? '';
+    $cliente_id     = $is_cliente ? $cliente_id_fixo : ($_POST['cliente_id'] ?? '');
     $data_orcamento = $_POST['data_orcamento'] ?? date('Y-m-d');
-    $data_validade = $_POST['data_validade'] ?? '';
-    $observacoes = cleanInput($_POST['observacoes'] ?? '');
-    $servicos_ids = $_POST['servicos'] ?? [];
-    $quantidades = $_POST['quantidades'] ?? [];
+    $data_validade  = $_POST['data_validade']  ?? '';
+    $observacoes    = cleanInput($_POST['observacoes'] ?? '');
+    $servicos_ids   = $_POST['servicos']   ?? [];
+    $quantidades    = $_POST['quantidades'] ?? [];
 
-    if (empty($cliente_id)) $erros['cliente'] = 'Selecione um cliente.';
+    if (empty($cliente_id))   $erros['cliente']  = 'Selecione um cliente.';
     if (empty($servicos_ids)) $erros['servicos'] = 'Adicione pelo menos um serviço.';
 
     if (empty($erros)) {
         try {
             $pdo->beginTransaction();
-            
-            // Calcular total
             $valor_total = 0;
-            foreach ($servicos_ids as $index => $serv_id) {
-                // Buscar o serviço pelo ID
-                $servStmt = $pdo->prepare("SELECT * FROM servicos WHERE id = ?");
-                $servStmt->execute([$serv_id]);
-                $serv = $servStmt->fetch();
-                
-                if ($serv) {
-                    $quantidade = $quantidades[$index] ?? 1;
-                    $subtotal = $serv['valor'] * $quantidade;
-                    $valor_total += $subtotal;
+            $itens = [];
+            $empresa_id_orc = null;
+            foreach ($servicos_ids as $idx => $sid) {
+                $s = $pdo->prepare("SELECT * FROM servicos WHERE id=?");
+                $s->execute([$sid]); $s = $s->fetch();
+                if ($s) {
+                    $qty  = max(1, (int)($quantidades[$idx] ?? 1));
+                    $sub  = $s['valor'] * $qty;
+                    $valor_total += $sub;
+                    $itens[] = [$sid, $qty, $s['valor'], $sub];
+                    if ($empresa_id_orc === null) $empresa_id_orc = $s['empresa_id'];
                 }
             }
-            
-            // Inserir orçamento
-            $stmt = $pdo->prepare("
-                INSERT INTO orcamentos (cliente_id, data_orcamento, data_validade, valor_total, observacoes, status) 
-                VALUES (?, ?, ?, ?, ?, 'pendente')
-            ");
-            $stmt->execute([$cliente_id, $data_orcamento, $data_validade, $valor_total, $observacoes]);
-            $orcamento_id = $pdo->lastInsertId();
-            
-            // Inserir itens
-            $itemStmt = $pdo->prepare("
-                INSERT INTO orcamento_itens (orcamento_id, servico_id, quantidade, valor_unitario, subtotal) 
-                VALUES (?, ?, ?, ?, ?)
-            ");
-            
-            foreach ($servicos_ids as $index => $serv_id) {
-                $servStmt = $pdo->prepare("SELECT * FROM servicos WHERE id = ?");
-                $servStmt->execute([$serv_id]);
-                $serv = $servStmt->fetch();
-                
-                if ($serv) {
-                    $quantidade = $quantidades[$index] ?? 1;
-                    $subtotal = $serv['valor'] * $quantidade;
-                    $itemStmt->execute([$orcamento_id, $serv_id, $quantidade, $serv['valor'], $subtotal]);
-                }
-            }
-            
+            $stmt = $pdo->prepare(
+                "INSERT INTO orcamentos (cliente_id, empresa_id, data_orcamento, data_validade, valor_total, observacoes, status)
+                 VALUES (?, ?, ?, ?, ?, ?, 'pendente')"
+            );
+            $stmt->execute([$cliente_id, $empresa_id_orc, $data_orcamento, $data_validade, $valor_total, $observacoes]);
+            $oid = $pdo->lastInsertId();
+            $ins = $pdo->prepare(
+                "INSERT INTO orcamento_itens (orcamento_id, servico_id, quantidade, valor_unitario, subtotal) VALUES (?,?,?,?,?)"
+            );
+            foreach ($itens as $it) $ins->execute([$oid, ...$it]);
             $pdo->commit();
-            header('Location: index.php?msg=' . urlencode('Orçamento criado com sucesso!') . '&type=success');
+
+            $redirect = $is_cliente ? '../dashboard_cliente.php' : 'index.php';
+            header('Location: ' . $redirect . '?msg=' . urlencode('Orçamento criado com sucesso!') . '&type=success');
             exit;
-            
         } catch (Exception $e) {
             $pdo->rollBack();
             $erros['geral'] = 'Erro ao criar orçamento: ' . $e->getMessage();
         }
     }
 }
+
+$servicosJS = json_encode(array_column($servicos, null, 'id'));
+$preItens = $pre_servico_id ? json_encode([['id' => $pre_servico_id, 'qty' => 1]]) : '[]';
+
+$back_url = $is_cliente
+    ? ($pre_empresa_id ? '../clientes/empresa.php?id='.$pre_empresa_id : '../dashboard_cliente.php')
+    : 'index.php';
 ?>
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Novo Orçamento - ServiceHub</title>
-    <link rel="stylesheet" href="../css/estilo.css">
-    <style>
-        .item-row {
-            background: #f9f9f9;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-            position: relative;
-        }
-        .item-row select, .item-row input {
-            margin-right: 10px;
-        }
-        .remove-item {
-            color: #dc3545;
-            cursor: pointer;
-            font-size: 20px;
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            transition: color 0.3s;
-        }
-        .remove-item:hover {
-            color: #c82333;
-        }
-        .btn-add {
-            margin-top: 10px;
-            background: #28a745;
-        }
-        .btn-add:hover {
-            background: #218838;
-        }
-        .servico-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-    </style>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Novo Orçamento — ServiceHub</title>
+  <link rel="stylesheet" href="../css/estilo.css">
+  <style>
+    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%); border-bottom:1px solid rgba(201,168,76,.2); position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
+    .dash-nav .inner { max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px; }
+    .nav-items { display:flex;gap:6px;flex-wrap:wrap;align-items:center; }
+    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--radius-sm);transition:all var(--transition);text-decoration:none; }
+    .nav-items a:hover { color:#fff;background:rgba(201,168,76,.18); }
+    .item-row { background:#f8fafc;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr 100px 36px;gap:10px;align-items:center; }
+    .item-row select,.item-row input { margin:0; }
+    .btn-remove { background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--red);cursor:pointer;font-size:16px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;transition:all var(--transition); }
+    .btn-remove:hover { background:var(--red);color:#fff;border-color:var(--red); }
+    .total-preview { background:var(--navy);color:#fff;border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-top:6px; }
+    .total-preview .lbl { font-size:13px;color:var(--slate); }
+    .total-preview .val { font-size:28px;font-weight:700;color:var(--gold);font-family:'DM Sans',sans-serif; }
+  </style>
 </head>
 <body>
-    
+
+<?php if ($is_cliente): ?>
+<nav class="dash-nav">
+  <div class="inner">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1></div>
+    <div class="nav-items">
+      <a href="../dashboard_cliente.php">Início</a>
+      <a href="../clientes/empresas.php">Empresas</a>
+      <a href="index.php">Meus Orçamentos</a>
+      <a href="../logout.php">Sair</a>
+    </div>
+  </div>
+</nav>
+<?php else: ?>
 <header class="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <h1>ServiceHub</h1>
-            <p>Gestão de Serviços e Orçamentos</p>
-        </div>
-        <nav class="main-nav">
-            <ul>
-                <li><a href="../index.php">Início</a></li>
-                <li><a href="../servicos/index.php">Serviços</a></li>
-                <li><a href="../clientes/index.php">Clientes</a></li>
-                <li><a href="../orcamentos/index.php">Orçamentos</a></li>
-                <li><a href="../relatorios/index.php">Relatórios</a></li>
-            </ul>
-        </nav>
-    </div>
+  <div class="header-content">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><p>Gestão de Serviços &amp; Orçamentos</p></div>
+    <nav class="main-nav"><ul>
+      <li><a href="../index.php">Início</a></li>
+      <li><a href="../servicos/index.php">Serviços</a></li>
+      <li><a href="../clientes/index.php">Clientes</a></li>
+      <li><a href="index.php" class="active">Orçamentos</a></li>
+      <li><a href="../relatorios/index.php">Relatórios</a></li>
+    </ul></nav>
+  </div>
 </header>
-    <div class="container">
-        <h1>💰 Novo Orçamento</h1>
-        <div class="text-right mb-3">
-            <a href="index.php" class="btn">← Voltar</a>
-            <a href="../clientes/create.php" class="btn">➕ Novo Cliente</a>
-        </div>
+<?php endif; ?>
 
-        <?php if (!empty($erros['geral'])) echo showMessage($erros['geral'], 'error'); ?>
+<div class="container">
+  <div class="page-title-row">
+    <h1>Novo Orçamento</h1>
+    <a href="<?= $back_url ?>" class="btn btn-ghost">← Voltar</a>
+  </div>
 
-        <form method="post" id="orcamentoForm">
-            <div class="form-group">
-                <label for="cliente_id">Cliente *</label>
-                <select id="cliente_id" name="cliente_id" class="form-control" required>
-                    <option value="">Selecione um cliente</option>
-                    <?php foreach ($clientes as $cli): ?>
-                        <option value="<?= $cli['id'] ?>" <?= $cli['id'] == $cliente_id ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cli['nome']) ?> - <?= htmlspecialchars($cli['telefone'] ?: 'Sem telefone') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (isset($erros['cliente'])): ?>
-                    <small style="color:red;"><?= $erros['cliente'] ?></small>
-                <?php endif; ?>
-            </div>
-            
-            <div class="form-row" style="display: flex; gap: 20px; margin-bottom: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label for="data_orcamento">Data do Orçamento</label>
-                    <input type="date" id="data_orcamento" name="data_orcamento" class="form-control" value="<?= $data_orcamento ?>">
-                </div>
-                
-                <div class="form-group" style="flex: 1;">
-                    <label for="data_validade">Data de Validade</label>
-                    <input type="date" id="data_validade" name="data_validade" class="form-control" value="<?= $data_validade ?>">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Serviços *</label>
-                <div id="items-container">
-                    <div class="item-row">
-                        <select name="servicos[]" class="form-control servico-select" style="width: 60%; display: inline-block;" required>
-                            <option value="">Selecione um serviço</option>
-                            <?php foreach ($servicos as $serv): ?>
-                                <option value="<?= $serv['id'] ?>" data-valor="<?= $serv['valor'] ?>" data-nome="<?= htmlspecialchars($serv['nome']) ?>">
-                                    <?= htmlspecialchars($serv['nome']) ?> - R$ <?= number_format($serv['valor'], 2, ',', '.') ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <input type="number" name="quantidades[]" placeholder="Quantidade" class="form-control" style="width: 25%; display: inline-block;" value="1" min="1">
-                        <span class="remove-item" onclick="removeItem(this)">🗑️</span>
-                        <div class="servico-info"></div>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-add" onclick="addItem()">+ Adicionar Serviço</button>
-                <?php if (isset($erros['servicos'])): ?>
-                    <small style="color:red; display: block; margin-top: 5px;"><?= $erros['servicos'] ?></small>
-                <?php endif; ?>
-            </div>
-            
-            <div class="form-group">
-                <label for="observacoes">Observações</label>
-                <textarea id="observacoes" name="observacoes" class="form-control" rows="4" placeholder="Informações adicionais sobre o orçamento..."><?= htmlspecialchars($observacoes) ?></textarea>
-            </div>
-            
-            <div class="form-group">
-                <button type="submit" class="btn" style="background: #28a745; font-size: 16px; padding: 12px 24px;">✅ Criar Orçamento</button>
-                <button type="reset" class="btn btn-warning" onclick="resetForm()">⟳ Limpar</button>
-            </div>
-        </form>
-        
-        <div class="resumo" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <h3>Resumo do Orçamento</h3>
-            <p><strong>Total:</strong> <span id="totalPreview">R$ 0,00</span></p>
+  <div class="form-container">
+    <?php if (!empty($erros['geral'])): echo showMessage($erros['geral'], 'error'); endif; ?>
+
+    <form method="post" id="orcForm">
+      <div class="form-section">
+        <div class="form-section-title">Dados do Orçamento</div>
+
+        <?php if (!$is_cliente): ?>
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select name="cliente_id" class="form-control" required>
+            <option value="">Selecione um cliente…</option>
+            <?php foreach ($clientes as $c): ?>
+            <option value="<?=$c['id']?>" <?=$c['id']==$cliente_id?'selected':''?>>
+              <?= htmlspecialchars($c['nome']) ?><?= $c['telefone'] ? ' — '.$c['telefone'] : '' ?>
+            </option>
+            <?php endforeach; ?>
+          </select>
+          <?php if (isset($erros['cliente'])): ?><span class="error-text"><?=$erros['cliente']?></span><?php endif; ?>
         </div>
-    </div>
-    
-    <script>
-        function addItem() {
-            const container = document.getElementById('items-container');
-            const newItem = document.createElement('div');
-            newItem.className = 'item-row';
-            newItem.innerHTML = `
-                <select name="servicos[]" class="form-control servico-select" style="width: 60%; display: inline-block;" required onchange="updateTotal()">
-                    <option value="">Selecione um serviço</option>
-                    <?php foreach ($servicos as $serv): ?>
-                        <option value="<?= $serv['id'] ?>" data-valor="<?= $serv['valor'] ?>" data-nome="<?= htmlspecialchars($serv['nome']) ?>">
-                            <?= htmlspecialchars($serv['nome']) ?> - R$ <?= number_format($serv['valor'], 2, ',', '.') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <input type="number" name="quantidades[]" placeholder="Quantidade" class="form-control" style="width: 25%; display: inline-block;" value="1" min="1" onchange="updateTotal()" onkeyup="updateTotal()">
-                <span class="remove-item" onclick="removeItem(this)">🗑️</span>
-                <div class="servico-info"></div>
-            `;
-            container.appendChild(newItem);
-            updateTotal();
-        }
-        
-        function removeItem(element) {
-            if (document.querySelectorAll('.item-row').length > 1) {
-                element.parentElement.remove();
-                updateTotal();
-            } else {
-                alert('Adicione pelo menos um serviço!');
-            }
-        }
-        
-        function updateTotal() {
-            let total = 0;
-            const rows = document.querySelectorAll('.item-row');
-            
-            rows.forEach(row => {
-                const select = row.querySelector('.servico-select');
-                const quantidade = row.querySelector('input[name="quantidades[]"]');
-                
-                if (select && select.value && quantidade) {
-                    const valor = parseFloat(select.options[select.selectedIndex]?.dataset.valor || 0);
-                    const qtd = parseInt(quantidade.value) || 0;
-                    total += valor * qtd;
-                }
-            });
-            
-            document.getElementById('totalPreview').innerHTML = 'R$ ' + total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        
-        function resetForm() {
-            if (confirm('Tem certeza que deseja limpar o formulário?')) {
-                document.getElementById('orcamentoForm').reset();
-                const container = document.getElementById('items-container');
-                while (container.children.length > 1) {
-                    container.removeChild(container.lastChild);
-                }
-                updateTotal();
-            }
-        }
-        
-        // Atualizar total quando mudar seleção ou quantidade
-        document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('servico-select') || e.target.name === 'quantidades[]') {
-                updateTotal();
-            }
-        });
-        
-        document.addEventListener('keyup', function(e) {
-            if (e.target.name === 'quantidades[]') {
-                updateTotal();
-            }
-        });
-        
-        // Inicializar total
-        updateTotal();
-    </script>
+        <?php else: ?>
+          <input type="hidden" name="cliente_id" value="<?= $cliente_id_fixo ?>">
+          <div class="form-group">
+            <label>Cliente</label>
+            <input type="text" class="form-control" value="<?= htmlspecialchars($_SESSION['cliente_nome']) ?>" disabled>
+          </div>
+        <?php endif; ?>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data do Orçamento</label>
+            <input type="date" name="data_orcamento" class="form-control" value="<?=$data_orcamento?>">
+          </div>
+          <div class="form-group">
+            <label>Data de Validade</label>
+            <input type="date" name="data_validade" class="form-control" value="<?=$data_validade?>">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Serviços</div>
+        <?php if (isset($erros['servicos'])): ?><span class="error-text" style="display:block;margin-bottom:12px;"><?=$erros['servicos']?></span><?php endif; ?>
+        <div id="items-container"></div>
+        <button type="button" class="btn btn-success btn-sm" style="margin-top:10px;" onclick="addRow()">+ Adicionar Serviço</button>
+        <div class="total-preview" style="margin-top:16px;">
+          <div class="lbl">Total do Orçamento</div>
+          <div class="val" id="totalVal">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Observações</div>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea name="observacoes" class="form-control" rows="3" placeholder="Informações adicionais…"><?= htmlspecialchars($observacoes) ?></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn btn-primary btn-lg">Criar Orçamento</button>
+        <a href="<?= $back_url ?>" class="btn btn-ghost btn-lg">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const SERVICOS  = <?= $servicosJS ?>;
+const PRE_ITENS = <?= $preItens ?>;
+
+function buildOptions(selectedId) {
+  let html = '<option value="">Selecione um serviço…</option>';
+  let lastEmp = '';
+  for (const id in SERVICOS) {
+    const s   = SERVICOS[id];
+    const emp = s.nome_empresa || '';
+    if (emp !== lastEmp) {
+      if (lastEmp) html += '</optgroup>';
+      html += `<optgroup label="${emp}">`;
+      lastEmp = emp;
+    }
+    const sel = id == selectedId ? ' selected' : '';
+    const val = parseFloat(s.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    html += `<option value="${id}" data-valor="${s.valor}"${sel}>${s.nome} — R$ ${val}</option>`;
+  }
+  if (lastEmp) html += '</optgroup>';
+  return html;
+}
+
+function addRow(selectedId='', qty=1) {
+  const c = document.getElementById('items-container');
+  const d = document.createElement('div');
+  d.className = 'item-row';
+  d.innerHTML = `
+    <select name="servicos[]" class="form-control" onchange="calcTotal()">${buildOptions(selectedId)}</select>
+    <input type="number" name="quantidades[]" class="form-control" value="${qty}" min="1" onchange="calcTotal()" oninput="calcTotal()">
+    <button type="button" class="btn-remove" onclick="removeRow(this)" title="Remover">×</button>
+  `;
+  c.appendChild(d);
+  calcTotal();
+}
+
+function removeRow(btn) {
+  const rows = document.querySelectorAll('.item-row');
+  if (rows.length <= 1) { alert('Mantenha ao menos um serviço.'); return; }
+  btn.closest('.item-row').remove();
+  calcTotal();
+}
+
+function calcTotal() {
+  let total = 0;
+  document.querySelectorAll('.item-row').forEach(row => {
+    const sel = row.querySelector('select');
+    const qty = row.querySelector('input[type=number]');
+    if (sel && sel.value && qty) {
+      const opt = sel.options[sel.selectedIndex];
+      total += (parseFloat(opt.dataset.valor)||0) * (parseInt(qty.value)||0);
+    }
+  });
+  document.getElementById('totalVal').textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (PRE_ITENS.length > 0) {
+    PRE_ITENS.forEach(it => addRow(it.id, it.qty));
+  } else {
+    addRow();
+  }
+});
+</script>
 </body>
 </html>
