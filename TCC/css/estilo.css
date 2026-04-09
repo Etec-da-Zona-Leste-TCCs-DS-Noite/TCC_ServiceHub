@@ -628,3 +628,75 @@ tbody tr:hover { background: #f8fafc; }
   .stats-grid { grid-template-columns: 1fr; }
   table       { display: block; overflow-x: auto; }
 }
+
+/* ── Mobile nav hamburguer ───────────────────────────────── */
+.hamburger {
+  display: none;
+  background: none;
+  border: 1.5px solid rgba(255,255,255,.3);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 20px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .hamburger { display: block; }
+  .nav-items {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,.1);
+    gap: 2px;
+  }
+  .nav-items.open { display: flex; }
+  .nav-items a { padding: 10px 16px; border-radius: var(--radius-sm); }
+  .user-chip { flex-wrap: wrap; }
+  .dash-nav .inner { flex-wrap: wrap; }
+}
+
+/* ── Toasts / flash messages ─────────────────────────────── */
+@keyframes slideDown {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.success-msg, .error-msg, .alert {
+  animation: slideDown .25s ease-out;
+}
+
+/* ── Scrollbar personalizado ─────────────────────────────── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--slate); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--slate-lt); }
+
+/* ── Loading state para botões ───────────────────────────── */
+.btn[data-loading]::after {
+  content: ' ⏳';
+}
+
+/* ── Tooltip simples ─────────────────────────────────────── */
+[data-tip] {
+  position: relative;
+  cursor: help;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--navy);
+  color: #fff;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  z-index: 100;
+}
+[data-tip]:hover::after { opacity: 1; }

@@ -55,10 +55,12 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
 <nav class="dash-nav">
   <div class="inner">
     <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><small style="font-size:11px;color:var(--slate);display:block;">Área da Empresa</small></div>
+    <button class="hamburger" onclick="document.querySelector('.nav-items').classList.toggle('open')">☰</button>
     <div class="nav-items">
       <a href="dashboard_empresa.php">Início</a>
       <a href="empresas/meus_servicos.php">Meus Serviços</a>
       <a href="empresas/perfil.php">Perfil</a>
+      <a href="clientes/index.php">Clientes</a>
       <a href="orcamentos/index.php?empresa=<?=$eid?>">Orçamentos</a>
       <div class="user-chip">
         <div class="avatar"><?= strtoupper(substr($_SESSION['empresa_nome'],0,1)) ?></div>
@@ -167,5 +169,19 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
 <footer style="background:var(--navy);color:var(--slate);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
   © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
 </footer>
+
+<script>
+// Hamburger menu
+document.querySelector('.hamburger')?.addEventListener('click', function(){
+  document.querySelector('.nav-items').classList.toggle('open');
+});
+// Auto-loading em forms
+document.querySelectorAll('form').forEach(f => {
+  f.addEventListener('submit', function(){
+    const btn = this.querySelector('[type=submit]');
+    if(btn) btn.setAttribute('data-loading','1');
+  });
+});
+</script>
 </body>
 </html>

@@ -117,6 +117,7 @@ $totalPeriodo = array_sum(array_column($lista, 'valor_total'));
     <div class="nav-items">
       <a href="../dashboard_empresa.php">Início</a>
       <a href="../empresas/meus_servicos.php">Meus Serviços</a>
+      <a href="../empresas/perfil.php">Perfil</a>
       <a href="../orcamentos/index.php">Orçamentos</a>
       <a href="index.php" style="color:#fff;background:rgba(201,168,76,.18);">Relatórios</a>
       <a href="../logout.php">Sair</a>

@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       </div>
       <button type="submit" class="btn-auth">Entrar como Cliente</button>
       <div class="auth-link">Não tem conta? <a href="clientes/cadastro.php">Cadastre-se</a></div>
+      <div class="auth-link"><a href="esqueci_senha.php">Esqueci minha senha</a></div>
     </form>
 
     <form method="post" id="form-empresa" class="tab-pane">
@@ -75,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       </div>
       <button type="submit" class="btn-auth">Entrar como Empresa</button>
       <div class="auth-link">Não tem conta? <a href="empresas/cadastro.php">Cadastre sua empresa</a></div>
+      <div class="auth-link"><a href="esqueci_senha.php?tipo=empresa">Esqueci minha senha</a></div>
     </form>
   </div>
 </div>

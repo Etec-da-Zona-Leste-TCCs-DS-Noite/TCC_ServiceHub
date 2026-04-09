@@ -1,5 +1,10 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
+require_once '../includes/functions.php';
+verificarLogin();
+if (!isEmpresa()) { header('Location: ../index.php'); exit; }
 
 $id = $_GET['id'] ?? 0;
 

@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($check->fetch()) $erros['email'] = 'E-mail já cadastrado.';
 
     if (empty($erros)) {
-        $senha_hash = md5($senha);
+        $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare(
             "INSERT INTO clientes (nome, email, senha, telefone, endereco, tipo, cpf_cnpj) VALUES (?, ?, ?, ?, ?, ?, ?)"
         );

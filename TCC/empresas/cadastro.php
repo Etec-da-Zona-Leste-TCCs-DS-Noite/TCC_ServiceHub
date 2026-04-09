@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($erros)) {
-        $senha_hash = md5($senha);
+        $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("INSERT INTO empresas (nome_empresa, email, senha, cnpj, telefone, endereco, descricao, site) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if ($stmt->execute([$nome_empresa, $email, $senha_hash, $cnpj, $telefone, $endereco, $descricao, $site])) {
             header('Location: ../index.php?msg=' . urlencode('Empresa cadastrada com sucesso! Faça login.') . '&type=success');

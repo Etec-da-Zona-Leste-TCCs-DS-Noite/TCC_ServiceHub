@@ -1,6 +1,10 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+verificarLogin();
+if (!isEmpresa()) { header('Location: ../index.php'); exit; }
 
 $page   = max(1, (int)($_GET['page'] ?? 1));
 $limit  = 10;
@@ -15,11 +19,11 @@ $total->execute($params);
 $total      = $total->fetchColumn();
 $totalPages = (int)ceil($total / $limit);
 
-$sql = "SELECT * FROM servicos $where ORDER BY id DESC LIMIT :lim OFFSET :off";
+$sql = "SELECT * FROM servicos $where ORDER BY id DESC LIMIT ? OFFSET ?";
 $stmt = $pdo->prepare($sql);
-if ($catFiltro) $stmt->bindValue(1, $catFiltro);
-$stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-$stmt->bindValue(':off', $offset, PDO::PARAM_INT);
+foreach ($params as $k => $v) $stmt->bindValue($k + 1, $v);
+$stmt->bindValue(count($params) + 1, (int)$limit, PDO::PARAM_INT);
+$stmt->bindValue(count($params) + 2, (int)$offset, PDO::PARAM_INT);
 $stmt->execute();
 $servicos = $stmt->fetchAll();
 

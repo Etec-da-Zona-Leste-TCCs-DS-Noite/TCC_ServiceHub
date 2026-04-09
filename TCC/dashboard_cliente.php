@@ -8,7 +8,7 @@ if (!isCliente()) { header('Location: index.php'); exit; }
 
 $cid = $_SESSION['cliente_id'];
 $empresas     = $pdo->query("SELECT * FROM empresas WHERE status=1 ORDER BY nome_empresa")->fetchAll();
-$orcamentosStmt=$pdo->prepare("SELECT o.*,s.nome AS svc,e.nome_empresa AS emp FROM orcamentos o JOIN servicos s ON s.id=o.servico_id JOIN empresas e ON e.id=o.empresa_id WHERE o.cliente_id=? ORDER BY o.created_at DESC LIMIT 10");
+$orcamentosStmt=$pdo->prepare("SELECT o.*,s.nome AS svc,e.nome_empresa AS emp FROM orcamentos o LEFT JOIN servicos s ON s.id=o.servico_id LEFT JOIN empresas e ON e.id=o.empresa_id WHERE o.cliente_id=? ORDER BY o.created_at DESC LIMIT 10");
 $orcamentosStmt->execute([$cid]); $orcList=$orcamentosStmt->fetchAll();
 
 $r=$pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE cliente_id=?"); $r->execute([$cid]); $totalOrc=$r->fetchColumn();
@@ -47,10 +47,12 @@ $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND
 <nav class="dash-nav">
   <div class="inner">
     <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1></div>
+    <button class="hamburger" onclick="document.querySelector('.nav-items').classList.toggle('open')">☰</button>
     <div class="nav-items">
       <a href="dashboard_cliente.php">Início</a>
       <a href="clientes/empresas.php">Empresas</a>
       <a href="orcamentos/index.php?cliente=<?=$cid?>">Meus Orçamentos</a>
+      <a href="clientes/perfil.php">Meu Perfil</a>
       <div class="user-chip">
         <div class="avatar"><?= strtoupper(substr($_SESSION['cliente_nome'],0,1)) ?></div>
         <span style="color:#fff;font-size:13px;"><?= htmlspecialchars($_SESSION['cliente_nome']) ?></span>
@@ -109,8 +111,8 @@ $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND
         <?php foreach ($orcList as $o): ?>
         <tr>
           <td style="color:var(--text-muted);font-size:12px;">#<?=$o['id']?></td>
-          <td><?= htmlspecialchars($o['svc']) ?></td>
-          <td><?= htmlspecialchars($o['emp']) ?></td>
+          <td><?= htmlspecialchars($o['svc'] ?? 'Serviço removido') ?></td>
+          <td><?= htmlspecialchars($o['emp'] ?? 'Empresa removida') ?></td>
           <td><strong style="color:var(--teal);"><?= formatMoney($o['valor_total']) ?></strong></td>
           <td><?= formatDate($o['data_orcamento']) ?></td>
           <td><?= statusBadge($o['status']) ?></td>
@@ -128,5 +130,19 @@ $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND
 <footer style="background:var(--navy);color:var(--slate);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
   © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
 </footer>
+
+<script>
+// Hamburger menu
+document.querySelector('.hamburger')?.addEventListener('click', function(){
+  document.querySelector('.nav-items').classList.toggle('open');
+});
+// Auto-loading em forms
+document.querySelectorAll('form').forEach(f => {
+  f.addEventListener('submit', function(){
+    const btn = this.querySelector('[type=submit]');
+    if(btn) btn.setAttribute('data-loading','1');
+  });
+});
+</script>
 </body>
 </html>

@@ -95,3 +95,9 @@ INSERT INTO orcamentos (cliente_id, servico_id, empresa_id, quantidade, valor_to
 (1, 1, 1, 1, 1500.00, 'aprovado', CURDATE()),
 (2, 3, 2, 1,  500.00, 'pendente', CURDATE()),
 (1, 5, 3, 2,  400.00, 'concluido', CURDATE());
+
+-- Colunas para recuperação de senha (adicionar se não existirem)
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) NULL;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) NULL;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;

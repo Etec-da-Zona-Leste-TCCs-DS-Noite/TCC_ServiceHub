@@ -1,6 +1,10 @@
 <?php
+session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+verificarLogin();
+if (!isEmpresa()) { header('Location: ../index.php'); exit; }
 
 $erros = []; $nome=$descricao=$categoria=''; $valor=''; $duracao_estimada=''; $status=1;
 

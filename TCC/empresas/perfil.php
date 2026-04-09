@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($senha !== $confirmar_senha) {
             $erros['confirmar_senha'] = 'As senhas não conferem.';
         } else {
-            $senha_hash = md5($senha);
+            $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
         }
     }
     
