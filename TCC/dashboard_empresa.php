@@ -13,6 +13,7 @@ $r=$pdo->prepare("SELECT COUNT(*) FROM servicos WHERE empresa_id=? AND status=1"
 $r=$pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE empresa_id=?"); $r->execute([$eid]); $totalOrc=$r->fetchColumn();
 $r=$pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE empresa_id=? AND status='aprovado'"); $r->execute([$eid]); $totalAprov=$r->fetchColumn();
 $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE empresa_id=? AND status='aprovado'"); $r->execute([$eid]); $fat=$r->fetchColumn();
+$avalDados = mediaAvaliacoes($pdo, $eid);
 
 $orcStmt=$pdo->prepare("SELECT o.*,c.nome AS cli,s.nome AS svc FROM orcamentos o JOIN clientes c ON c.id=o.cliente_id JOIN servicos s ON s.id=o.servico_id WHERE o.empresa_id=? ORDER BY o.created_at DESC LIMIT 10");
 $orcStmt->execute([$eid]); $orcList=$orcStmt->fetchAll();
@@ -62,6 +63,8 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <a href="empresas/perfil.php">Perfil</a>
       <a href="clientes/index.php">Clientes</a>
       <a href="orcamentos/index.php?empresa=<?=$eid?>">Orçamentos</a>
+      <a href="avaliacoes/index.php">⭐ Avaliações</a>
+      <a href="chat/index.php" id="navChat">💬 Mensagens</a>
       <div class="user-chip">
         <div class="avatar"><?= strtoupper(substr($_SESSION['empresa_nome'],0,1)) ?></div>
         <span style="color:#fff;font-size:13px;"><?= htmlspecialchars($_SESSION['empresa_nome']) ?></span>
@@ -100,6 +103,18 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <div class="stat-icon">💰</div>
       <div class="stat-number"><?= formatMoney($fat) ?></div>
       <div class="stat-label">Faturamento total</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid var(--gold);">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-number" style="color:var(--gold);">
+        <?= $avalDados['total'] > 0 ? number_format($avalDados['media'],1,',','') : '—' ?>
+      </div>
+      <div class="stat-label">
+        Avaliação média
+        <?php if ($avalDados['total'] > 0): ?>
+          <br><small style="font-size:11px;"><?=$avalDados['total']?> avaliação(ões)</small>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -182,6 +197,18 @@ document.querySelectorAll('form').forEach(f => {
     if(btn) btn.setAttribute('data-loading','1');
   });
 });
+</script>
+<script>
+(function pollUnread() {
+  fetch('chat/unread.php')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('navChat');
+      if (el) el.innerHTML = '💬 Mensagens' + (d.count > 0 ? ` <span style="background:#c9a84c;color:#0d1b2a;border-radius:100px;font-size:11px;font-weight:700;padding:1px 7px;">${d.count}</span>` : '');
+    })
+    .catch(() => {});
+  setTimeout(pollUnread, 10000);
+})();
 </script>
 </body>
 </html>

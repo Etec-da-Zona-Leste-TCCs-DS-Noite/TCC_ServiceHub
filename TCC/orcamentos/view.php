@@ -50,6 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status'])) {
 }
 
 $back_url = $is_cliente ? 'index.php' : ($is_empresa ? 'index.php' : 'index.php');
+
+// Avaliação: verifica se o cliente já avaliou este orçamento
+$jaAvaliou = false;
+$avaliacao = null;
+if ($is_cliente && $orc['status'] === 'concluido') {
+    $stmtAv = $pdo->prepare("SELECT * FROM avaliacoes WHERE orcamento_id = ?");
+    $stmtAv->execute([$id]);
+    $avaliacao = $stmtAv->fetch();
+    $jaAvaliou = (bool)$avaliacao;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -109,7 +119,26 @@ $back_url = $is_cliente ? 'index.php' : ($is_empresa ? 'index.php' : 'index.php'
       <?php if (!$is_cliente): ?>
         <a href="edit.php?id=<?=$orc['id']?>" class="btn btn-warning">Editar</a>
       <?php endif; ?>
+      <?php if ($is_cliente && $orc['status'] === 'concluido'): ?>
+        <?php if ($jaAvaliou): ?>
+          <a href="../avaliacoes/index.php" class="btn btn-ghost">⭐ Ver minha avaliação</a>
+        <?php else: ?>
+          <a href="../avaliacoes/create.php?orcamento_id=<?=$orc['id']?>" class="btn btn-primary">⭐ Avaliar Serviço</a>
+        <?php endif; ?>
+      <?php endif; ?>
       <button onclick="window.print()" class="btn btn-ghost">🖨 Imprimir</button>
+      <?php if ($is_cliente && $orc['empresa_id']): ?>
+        <a href="../chat/iniciar.php?empresa_id=<?=$orc['empresa_id']?>&orcamento_id=<?=$orc['id']?>" class="btn btn-ghost">💬 Falar com a Empresa</a>
+      <?php elseif ($is_empresa && $orc['cliente_id']): ?>
+        <?php
+          $chkConv = $pdo->prepare("SELECT id FROM conversas WHERE cliente_id=? AND empresa_id=?");
+          $chkConv->execute([$orc['cliente_id'], $orc['empresa_id']]);
+          $chkC = $chkConv->fetch();
+        ?>
+        <?php if ($chkC): ?>
+          <a href="../chat/conversa.php?id=<?=$chkC['id']?>" class="btn btn-ghost">💬 Chat com Cliente</a>
+        <?php endif; ?>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -209,6 +238,59 @@ $back_url = $is_cliente ? 'index.php' : ($is_empresa ? 'index.php' : 'index.php'
     <div class="card-header"><h3>Observações</h3></div>
     <div class="card-body">
       <p style="white-space:pre-line;font-size:14px;"><?= htmlspecialchars($orc['observacoes']) ?></p>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php
+  // Bloco de avaliação — exibe se concluído
+  if ($orc['status'] === 'concluido'):
+      $stmtAv2 = $pdo->prepare("
+          SELECT a.*, c.nome AS cliente_nome
+          FROM avaliacoes a JOIN clientes c ON c.id = a.cliente_id
+          WHERE a.orcamento_id = ?");
+      $stmtAv2->execute([$id]);
+      $avBlock = $stmtAv2->fetch();
+  ?>
+  <div class="card no-print" style="margin-top:20px;border-top:2px solid var(--gold-dim);">
+    <div class="card-header" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">⭐</span>
+      <h3 style="margin:0;">Avaliação do Serviço</h3>
+    </div>
+    <div class="card-body" style="padding:20px;">
+      <?php if ($avBlock): ?>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <?php
+            $stars = '';
+            for ($i=1; $i<=5; $i++) $stars .= $i<=$avBlock['nota'] ? '<span style="color:#c9a84c;font-size:22px;">★</span>' : '<span style="color:#d0d8e0;font-size:22px;">☆</span>';
+            echo $stars;
+            ?>
+            <?php if ($avBlock['titulo']): ?>
+              <div style="font-weight:600;font-size:15px;margin-top:6px;"><?= htmlspecialchars($avBlock['titulo']) ?></div>
+            <?php endif; ?>
+            <?php if ($avBlock['comentario']): ?>
+              <p style="font-size:14px;color:var(--text-muted);margin-top:6px;line-height:1.7;">"<?= nl2br(htmlspecialchars($avBlock['comentario'])) ?>"</p>
+            <?php endif; ?>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+              Por <strong><?= htmlspecialchars($avBlock['cliente_nome']) ?></strong> em <?= formatDate($avBlock['created_at'],'d/m/Y') ?>
+            </div>
+            <?php if ($avBlock['resposta']): ?>
+              <div style="background:var(--bg);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:10px 14px;margin-top:12px;">
+                <strong style="font-size:12px;color:var(--gold);display:block;margin-bottom:4px;">🏢 Resposta da empresa</strong>
+                <p style="font-size:13px;color:var(--text-muted);"><?= nl2br(htmlspecialchars($avBlock['resposta'])) ?></p>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php elseif ($is_cliente): ?>
+        <div style="text-align:center;padding:20px;">
+          <p style="color:var(--text-muted);margin-bottom:14px;">Este serviço ainda não foi avaliado. Compartilhe sua experiência!</p>
+          <a href="../avaliacoes/create.php?orcamento_id=<?=$id?>" class="btn btn-primary">⭐ Avaliar agora</a>
+        </div>
+      <?php else: ?>
+        <p style="color:var(--text-muted);font-size:14px;">Nenhuma avaliação registrada para este orçamento.</p>
+      <?php endif; ?>
     </div>
   </div>
   <?php endif; ?>

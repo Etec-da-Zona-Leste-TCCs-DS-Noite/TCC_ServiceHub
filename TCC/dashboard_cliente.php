@@ -14,6 +14,18 @@ $orcamentosStmt->execute([$cid]); $orcList=$orcamentosStmt->fetchAll();
 $r=$pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE cliente_id=?"); $r->execute([$cid]); $totalOrc=$r->fetchColumn();
 $r=$pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE cliente_id=? AND status='aprovado'"); $r->execute([$cid]); $totalAprov=$r->fetchColumn();
 $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND status='aprovado'"); $r->execute([$cid]); $gasto=$r->fetchColumn();
+
+// Orçamentos concluídos sem avaliação
+$pendAvStmt = $pdo->prepare("
+    SELECT o.id, e.nome_empresa, s.nome AS servico_nome
+    FROM orcamentos o
+    LEFT JOIN empresas e ON e.id = o.empresa_id
+    LEFT JOIN servicos s ON s.id = o.servico_id
+    WHERE o.cliente_id = ? AND o.status = 'concluido'
+      AND NOT EXISTS (SELECT 1 FROM avaliacoes a WHERE a.orcamento_id = o.id)
+    ORDER BY o.updated_at DESC LIMIT 5");
+$pendAvStmt->execute([$cid]);
+$pendentesAvaliar = $pendAvStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -52,6 +64,8 @@ $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND
       <a href="dashboard_cliente.php">Início</a>
       <a href="clientes/empresas.php">Empresas</a>
       <a href="orcamentos/index.php?cliente=<?=$cid?>">Meus Orçamentos</a>
+      <a href="avaliacoes/index.php">⭐ Avaliações</a>
+      <a href="chat/index.php" id="navChat">💬 Mensagens</a>
       <a href="clientes/perfil.php">Meu Perfil</a>
       <div class="user-chip">
         <div class="avatar"><?= strtoupper(substr($_SESSION['cliente_nome'],0,1)) ?></div>
@@ -85,6 +99,27 @@ $r=$pdo->prepare("SELECT SUM(valor_total) FROM orcamentos WHERE cliente_id=? AND
       <div class="stat-label">Total investido</div>
     </div>
   </div>
+
+  <?php if (!empty($pendentesAvaliar)): ?>
+  <div style="background:linear-gradient(135deg,#1a2d42,#0d1b2a);border:1px solid rgba(201,168,76,.3);border-radius:var(--radius);padding:20px 24px;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span style="font-size:22px;">⭐</span>
+      <strong style="color:#fff;font-size:15px;">Serviços aguardando sua avaliação</strong>
+      <span style="background:var(--gold);color:var(--navy);border-radius:100px;padding:1px 8px;font-size:11px;font-weight:700;"><?= count($pendentesAvaliar) ?></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <?php foreach ($pendentesAvaliar as $pa): ?>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.05);border-radius:var(--radius-sm);padding:10px 14px;">
+        <div>
+          <strong style="color:#fff;font-size:13px;"><?= htmlspecialchars($pa['nome_empresa'] ?? '—') ?></strong>
+          <span style="color:var(--slate);font-size:12px;"> · <?= htmlspecialchars($pa['servico_nome'] ?? '—') ?> · Orçamento #<?=$pa['id']?></span>
+        </div>
+        <a href="avaliacoes/create.php?orcamento_id=<?=$pa['id']?>" class="btn btn-sm btn-primary" style="white-space:nowrap;">Avaliar</a>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <h2 class="section-heading">Empresas em Destaque</h2>
   <div class="empresa-grid">
@@ -143,6 +178,19 @@ document.querySelectorAll('form').forEach(f => {
     if(btn) btn.setAttribute('data-loading','1');
   });
 });
+</script>
+<script>
+// Badge de mensagens não lidas
+(function pollUnread() {
+  fetch('chat/unread.php')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('navChat');
+      if (el) el.innerHTML = '💬 Mensagens' + (d.count > 0 ? ` <span style="background:#c9a84c;color:#0d1b2a;border-radius:100px;font-size:11px;font-weight:700;padding:1px 7px;">${d.count}</span>` : '');
+    })
+    .catch(() => {});
+  setTimeout(pollUnread, 10000);
+})();
 </script>
 </body>
 </html>

@@ -42,6 +42,19 @@ $cid = $_SESSION['cliente_id'];
 $orcEmpresaStmt = $pdo->prepare("SELECT COUNT(*) FROM orcamentos WHERE cliente_id = ? AND empresa_id = ?");
 $orcEmpresaStmt->execute([$cid, $empresa_id]);
 $totalOrcEmpresa = $orcEmpresaStmt->fetchColumn();
+
+// Avaliações da empresa
+$avalDados = mediaAvaliacoes($pdo, $empresa_id);
+$avalStmt = $pdo->prepare("
+    SELECT a.*, c.nome AS cliente_nome, s.nome AS servico_nome
+    FROM avaliacoes a
+    JOIN clientes c ON c.id = a.cliente_id
+    JOIN orcamentos o ON o.id = a.orcamento_id
+    LEFT JOIN servicos s ON s.id = o.servico_id
+    WHERE a.empresa_id = ?
+    ORDER BY a.created_at DESC LIMIT 6");
+$avalStmt->execute([$empresa_id]);
+$avaliacoes = $avalStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -201,6 +214,12 @@ $totalOrcEmpresa = $orcEmpresaStmt->fetchColumn();
                     <?= $totalOrcEmpresa ?> orçamento(s) solicitado(s)
                 </span>
                 <?php endif; ?>
+                <a href="../chat/iniciar.php?empresa_id=<?=$empresa_id?>"
+                   style="display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);color:var(--gold-lt);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;"
+                   onmouseover="this.style.background='rgba(201,168,76,.3)'"
+                   onmouseout="this.style.background='rgba(201,168,76,.15)'">
+                  💬 Enviar Mensagem
+                </a>
             </div>
         </div>
     </div>
@@ -258,7 +277,57 @@ $totalOrcEmpresa = $orcEmpresaStmt->fetchColumn();
     <?php endif; ?>
 </div>
 
-<footer style="background:#0a2b3e;color:rgba(255,255,255,.5);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
+<!-- ══ SEÇÃO DE AVALIAÇÕES ══ -->
+<div class="container" style="padding-top:0;">
+  <div style="border-top:1px solid var(--border);padding-top:36px;margin-bottom:48px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+      <h2 style="border-left:3px solid var(--gold);padding-left:12px;font-size:20px;">⭐ Avaliações dos Clientes</h2>
+      <?php if ($avalDados['total'] > 0): ?>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:28px;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif;"><?= number_format($avalDados['media'],1,',','') ?></span>
+          <?= starRating($avalDados['media']) ?>
+          <span style="font-size:13px;color:var(--text-muted);">(<?=$avalDados['total']?> avaliação<?= $avalDados['total']!=1?'ões':'' ?>)</span>
+        </div>
+      <?php endif; ?>
+    </div>
+
+    <?php if (empty($avaliacoes)): ?>
+      <div style="text-align:center;padding:40px 20px;color:var(--text-muted);">
+        <span style="font-size:40px;display:block;margin-bottom:10px;">💬</span>
+        <p>Esta empresa ainda não possui avaliações.</p>
+      </div>
+    <?php else: ?>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+        <?php foreach ($avaliacoes as $av): ?>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <?= starRating($av['nota']) ?>
+            <span style="font-size:12px;color:var(--text-muted);"><?= formatDate($av['created_at'],'d/m/Y') ?></span>
+          </div>
+          <?php if ($av['titulo']): ?>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px;"><?= htmlspecialchars($av['titulo']) ?></div>
+          <?php endif; ?>
+          <?php if ($av['comentario']): ?>
+            <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">"<?= htmlspecialchars(mb_substr($av['comentario'],0,200)).(strlen($av['comentario'])>200?'…':'') ?>"</p>
+          <?php endif; ?>
+          <div style="font-size:12px;color:var(--text-muted);">
+            Por <strong><?= htmlspecialchars($av['cliente_nome']) ?></strong>
+            <?= $av['servico_nome'] ? '· '.$av['servico_nome'] : '' ?>
+          </div>
+          <?php if ($av['resposta']): ?>
+          <div style="background:var(--bg);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:8px 12px;margin-top:10px;">
+            <strong style="font-size:11px;color:var(--gold);display:block;margin-bottom:2px;">🏢 Resposta da empresa</strong>
+            <p style="font-size:12px;color:var(--text-muted);"><?= htmlspecialchars(mb_substr($av['resposta'],0,150)).(strlen($av['resposta'])>150?'…':'') ?></p>
+          </div>
+          <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+</div>
+
+<footer style="background:#0a2b3e;color:rgba(255,255,255,.5);text-align:center;padding:20px;margin-top:0;font-size:13px;">
     © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
 </footer>
 </body>

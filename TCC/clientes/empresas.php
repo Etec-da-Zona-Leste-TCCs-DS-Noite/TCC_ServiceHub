@@ -187,6 +187,13 @@ $categorias = $pdo->query(
                 <div class="empresa-desc">
                     <?= htmlspecialchars(mb_substr($emp['descricao'] ?? 'Empresa especializada em serviços de qualidade.', 0, 120)) ?>...
                 </div>
+                <?php $av = mediaAvaliacoes($pdo, $emp['id']); ?>
+                <?php if ($av['total'] > 0): ?>
+                <div style="margin:8px 0 6px;display:flex;align-items:center;gap:6px;">
+                  <?= starRating($av['nota'] ?? $av['media'] ?? 0, true) ?>
+                  <span style="font-size:12px;color:var(--text-muted);"><?= number_format($av['media'],1,',','') ?> (<?=$av['total']?>)</span>
+                </div>
+                <?php endif; ?>
                 <div class="empresa-info">
                     <p><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($emp['endereco'] ?? 'Local não informado') ?></p>
                     <p><i class="fas fa-phone"></i> <?= htmlspecialchars($emp['telefone'] ?? 'Não informado') ?></p>
