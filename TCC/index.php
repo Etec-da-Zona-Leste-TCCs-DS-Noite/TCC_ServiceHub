@@ -28,6 +28,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>ServiceHub — Login</title>
   <link rel="stylesheet" href="css/estilo.css">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#c9a84c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ServiceHub">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
 <div class="auth-container">
@@ -91,6 +100,45 @@ function switchTab(tipo, btn) {
 <?php if (!empty($_POST['tipo'])&&$_POST['tipo']==='empresa'&&$erro): ?>
 switchTab('empresa', document.querySelector('.auth-tab:last-child'));
 <?php endif; ?>
+</script>
+
+<script>
+// Registra o Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('ServiceHub PWA ativo:', reg.scope))
+      .catch(err => console.warn('SW erro:', err));
+  });
+}
+
+// Botão de instalação como app
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // Cria botão de instalar se não existir
+  if (!document.getElementById('btn-instalar')) {
+    const btn = document.createElement('button');
+    btn.id = 'btn-instalar';
+    btn.textContent = '📲 Instalar como App';
+    btn.style.cssText = `
+      display:block; width:100%; margin-top:12px; padding:10px;
+      background:transparent; border:1px solid #c9a84c; color:#c9a84c;
+      border-radius:8px; cursor:pointer; font-size:14px; font-weight:500;
+    `;
+    btn.addEventListener('click', async () => {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') btn.remove();
+      deferredPrompt = null;
+    });
+    // Insere após o formulário ativo
+    const box = document.querySelector('.auth-box');
+    if (box) box.appendChild(btn);
+  }
+});
 </script>
 </body>
 </html>
