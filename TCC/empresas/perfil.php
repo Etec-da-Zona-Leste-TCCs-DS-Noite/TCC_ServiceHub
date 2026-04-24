@@ -68,12 +68,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($erros)) {
+        // Geocodificação automática quando endereço mudar
+        $geo_lat = $empresa['latitude'] ?? null; $geo_lng = $empresa['longitude'] ?? null;
+        if (!empty($endereco) && $endereco !== ($empresa['endereco'] ?? '')) {
+            $geoUrl = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
+                'q' => $endereco . ', Brasil', 'format' => 'json', 'limit' => 1]);
+            $ctx = stream_context_create(['http' => ['method' => 'GET',
+                'header' => "User-Agent: ServiceHub-TCC/1.0
+", 'timeout' => 6]]);
+            $geoResp = @file_get_contents($geoUrl, false, $ctx);
+            if ($geoResp) {
+                $geoData = json_decode($geoResp, true);
+                if (!empty($geoData)) { $geo_lat = (float)$geoData[0]['lat']; $geo_lng = (float)$geoData[0]['lon']; }
+            }
+        }
         if (isset($senha_hash)) {
-            $update = $pdo->prepare("UPDATE empresas SET nome_empresa = ?, email = ?, cnpj = ?, telefone = ?, endereco = ?, descricao = ?, site = ?, senha = ? WHERE id = ?");
-            $result = $update->execute([$nome_empresa, $email, $cnpj, $telefone, $endereco, $descricao, $site, $senha_hash, $empresa_id]);
+            $update = $pdo->prepare("UPDATE empresas SET nome_empresa = ?, email = ?, cnpj = ?, telefone = ?, endereco = ?, descricao = ?, site = ?, senha = ?, latitude = ?, longitude = ? WHERE id = ?");
+            $result = $update->execute([$nome_empresa, $email, $cnpj, $telefone, $endereco, $descricao, $site, $senha_hash, $geo_lat, $geo_lng, $empresa_id]);
         } else {
-            $update = $pdo->prepare("UPDATE empresas SET nome_empresa = ?, email = ?, cnpj = ?, telefone = ?, endereco = ?, descricao = ?, site = ? WHERE id = ?");
-            $result = $update->execute([$nome_empresa, $email, $cnpj, $telefone, $endereco, $descricao, $site, $empresa_id]);
+            $update = $pdo->prepare("UPDATE empresas SET nome_empresa = ?, email = ?, cnpj = ?, telefone = ?, endereco = ?, descricao = ?, site = ?, latitude = ?, longitude = ? WHERE id = ?");
+            $result = $update->execute([$nome_empresa, $email, $cnpj, $telefone, $endereco, $descricao, $site, $geo_lat, $geo_lng, $empresa_id]);
         }
         
         if ($result) {
@@ -254,8 +268,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div class="form-group">
-                <label>Endereço</label>
-                <input type="text" name="endereco" class="form-control" value="<?= htmlspecialchars($empresa['endereco']) ?>" placeholder="Cidade, Estado">
+                <label>Endereço <span style="font-size:11px;color:#90a4ae;">(geocodificado automaticamente ao salvar)</span></label>
+                <input type="text" name="endereco" id="enderecoField" class="form-control"
+                       value="<?= htmlspecialchars($empresa['endereco']) ?>"
+                       placeholder="Ex: Rua das Flores, 123, São Paulo, SP">
+                <?php if (!empty($empresa['latitude'])): ?>
+                <div id="geoStatus" style="margin-top:6px;padding:8px 12px;background:#e8f5e9;border-radius:8px;font-size:12px;color:#2e7d32;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-check-circle"></i>
+                    Localização mapeada:
+                    <strong><?= number_format($empresa['latitude'],5) ?>, <?= number_format($empresa['longitude'],5) ?></strong>
+                    <a href="https://www.openstreetmap.org/?mlat=<?= $empresa['latitude'] ?>&mlon=<?= $empresa['longitude'] ?>#map=15/<?= $empresa['latitude'] ?>/<?= $empresa['longitude'] ?>"
+                       target="_blank" style="color:#1565c0;font-size:11px;margin-left:4px;">
+                       <i class="fas fa-external-link-alt"></i> Ver no mapa
+                    </a>
+                </div>
+                <?php else: ?>
+                <div id="geoStatus" style="margin-top:6px;padding:8px 12px;background:#fff8e6;border-radius:8px;font-size:12px;color:#7a5c00;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Sem localização cadastrada. Preencha o endereço completo e salve para aparecer no mapa.
+                </div>
+                <?php endif; ?>
             </div>
             
             <div class="form-group">

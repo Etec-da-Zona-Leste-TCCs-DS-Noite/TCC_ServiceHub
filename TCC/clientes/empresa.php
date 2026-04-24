@@ -204,6 +204,7 @@ $avaliacoes = $avalStmt->fetchAll();
                 <div class="empresa-meta">
                     <?php if ($empresa['telefone']): ?><span><i class="fas fa-phone"></i><?= htmlspecialchars($empresa['telefone']) ?></span><?php endif; ?>
                     <?php if ($empresa['endereco']): ?><span><i class="fas fa-map-marker-alt"></i><?= htmlspecialchars($empresa['endereco']) ?></span><?php endif; ?>
+                    <?php if (!empty($empresa['latitude'])): ?><span><a href="https://www.openstreetmap.org/?mlat=<?= $empresa['latitude'] ?>&mlon=<?= $empresa['longitude'] ?>#map=16/<?= $empresa['latitude'] ?>/<?= $empresa['longitude'] ?>" target="_blank" style="color:rgba(255,255,255,.8);font-size:12px;"><i class="fas fa-map-marked-alt"></i> Ver no mapa</a></span><?php endif; ?>
                     <?php if ($empresa['site']): ?><span><i class="fas fa-globe"></i><a href="<?= htmlspecialchars($empresa['site']) ?>" target="_blank" style="color:rgba(255,255,255,.8);"><?= htmlspecialchars($empresa['site']) ?></a></span><?php endif; ?>
                 </div>
             </div>

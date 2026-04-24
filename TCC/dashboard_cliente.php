@@ -63,6 +63,7 @@ $pendentesAvaliar = $pendAvStmt->fetchAll();
     <div class="nav-items">
       <a href="dashboard_cliente.php">Início</a>
       <a href="clientes/empresas.php">Empresas</a>
+      <a href="clientes/mapa.php"><i class="fas fa-map-marked-alt"></i> Mapa</a>
       <a href="orcamentos/index.php?cliente=<?=$cid?>">Meus Orçamentos</a>
       <a href="avaliacoes/index.php">⭐ Avaliações</a>
       <a href="chat/index.php" id="navChat">💬 Mensagens</a>

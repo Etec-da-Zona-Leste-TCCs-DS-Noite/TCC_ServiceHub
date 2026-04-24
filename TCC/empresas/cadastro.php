@@ -37,8 +37,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($erros)) {
         $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO empresas (nome_empresa, email, senha, cnpj, telefone, endereco, descricao, site) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$nome_empresa, $email, $senha_hash, $cnpj, $telefone, $endereco, $descricao, $site])) {
+        // Geocodificação automática do endereço
+        $geo_lat = null; $geo_lng = null;
+        if (!empty($endereco)) {
+            $geoUrl = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
+                'q' => $endereco . ', Brasil', 'format' => 'json', 'limit' => 1]);
+            $ctx = stream_context_create(['http' => ['method' => 'GET',
+                'header' => "User-Agent: ServiceHub-TCC/1.0\r\n", 'timeout' => 6]]);
+            $geoResp = @file_get_contents($geoUrl, false, $ctx);
+            if ($geoResp) {
+                $geoData = json_decode($geoResp, true);
+                if (!empty($geoData)) { $geo_lat = (float)$geoData[0]['lat']; $geo_lng = (float)$geoData[0]['lon']; }
+            }
+        }
+        $stmt = $pdo->prepare("INSERT INTO empresas (nome_empresa, email, senha, cnpj, telefone, endereco, descricao, site, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nome_empresa, $email, $senha_hash, $cnpj, $telefone, $endereco, $descricao, $site, $geo_lat, $geo_lng])) {
             header('Location: ../index.php?msg=' . urlencode('Empresa cadastrada com sucesso! Faça login.') . '&type=success');
             exit;
         } else {

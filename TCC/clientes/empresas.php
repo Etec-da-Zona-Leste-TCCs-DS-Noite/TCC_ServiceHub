@@ -107,6 +107,18 @@ $categorias = $pdo->query(
             text-align: center; padding: 60px; background: white;
             border-radius: 12px; color: #999;
         }
+        .dist-badge {
+            display:inline-block; font-size:11px; font-weight:700;
+            background:#fff3cc; color:#7a5c00; border:1px solid #f0d060;
+            border-radius:12px; padding:2px 9px; margin-top:6px;
+        }
+        .btn-mapa {
+            display:inline-flex; align-items:center; gap:6px;
+            background:#1a4a6f; color:#fff; padding:9px 16px;
+            border-radius:8px; text-decoration:none; font-size:13px;
+            font-weight:600; transition:.2s;
+        }
+        .btn-mapa:hover { background:#0d2b3e; }
         @media (max-width: 600px) {
             .search-form { flex-direction: column; }
             .navbar .inner { flex-direction: column; gap: 10px; }
@@ -129,8 +141,16 @@ $categorias = $pdo->query(
 </nav>
 
 <div class="main-content">
-    <h1><i class="fas fa-building" style="color:#d4af37;"></i> Empresas Parceiras</h1>
-    <p style="color:#666;margin-bottom:25px;">Encontre a empresa ideal para o seu serviço</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:8px;">
+        <div>
+            <h1><i class="fas fa-building" style="color:#d4af37;"></i> Empresas Parceiras</h1>
+            <p style="color:#666;margin-top:4px;">Encontre a empresa ideal para o seu serviço</p>
+        </div>
+        <a href="mapa.php" class="btn-mapa">
+            <i class="fas fa-map-marked-alt"></i> Ver no Mapa
+        </a>
+    </div>
+    <div style="margin-bottom:18px;"></div>
 
     <!-- Busca via GET para funcionar sem JS -->
     <form class="search-form" method="get" action="">
@@ -196,6 +216,13 @@ $categorias = $pdo->query(
                 <?php endif; ?>
                 <div class="empresa-info">
                     <p><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($emp['endereco'] ?? 'Local não informado') ?></p>
+                    <?php if (!empty($emp['latitude'])): ?>
+                    <p style="margin-top:4px;">
+                        <span class="dist-badge" id="dist-<?= $emp['id'] ?>">
+                            <i class="fas fa-map-pin"></i> <?= number_format($emp['latitude'],4) ?>, <?= number_format($emp['longitude'],4) ?>
+                        </span>
+                    </p>
+                    <?php endif; ?>
                     <p><i class="fas fa-phone"></i> <?= htmlspecialchars($emp['telefone'] ?? 'Não informado') ?></p>
                     <p><i class="fas fa-briefcase"></i> <?= $totalServicos ?> serviço(s) disponível(is)</p>
                 </div>

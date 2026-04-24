@@ -170,3 +170,23 @@ CREATE TABLE IF NOT EXISTS chat_typing (
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (conversa_id, remetente)
 ) ENGINE=InnoDB;
+
+
+-- ══════════════════════════════════════════
+--  GEOLOCALIZAÇÃO  (novo)
+-- ══════════════════════════════════════════
+
+-- Adiciona colunas de latitude e longitude na tabela de empresas
+ALTER TABLE empresas
+    ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7) NULL COMMENT 'Latitude geocodificada',
+    ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL COMMENT 'Longitude geocodificada';
+
+-- Índice para buscas por proximidade (opcional, melhora performance)
+ALTER TABLE clientes
+    ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7) NULL,
+    ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL;
+
+-- Atualiza coordenadas das empresas de exemplo (São Paulo, SP)
+UPDATE empresas SET latitude = -23.5505, longitude = -46.6333 WHERE email = 'contato@techsolutions.com';
+UPDATE empresas SET latitude = -23.5629, longitude = -46.6544 WHERE email = 'contato@designpro.com';
+UPDATE empresas SET latitude = -23.5475, longitude = -46.6361 WHERE email = 'contato@suportetotal.com';
