@@ -309,7 +309,7 @@ $avaliacoes = $avalStmt->fetchAll();
             <div style="font-weight:600;font-size:14px;margin-bottom:4px;"><?= htmlspecialchars($av['titulo']) ?></div>
           <?php endif; ?>
           <?php if ($av['comentario']): ?>
-            <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">"<?= htmlspecialchars(mb_substr($av['comentario'],0,200)).(strlen($av['comentario'])>200?'…':'') ?>"</p>
+            <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">"<?= htmlspecialchars(mb_substr($av['comentario'],0,200)).(mb_strlen($av['comentario'])>200?'…':'') ?>"</p>
           <?php endif; ?>
           <div style="font-size:12px;color:var(--text-muted);">
             Por <strong><?= htmlspecialchars($av['cliente_nome']) ?></strong>
@@ -318,7 +318,7 @@ $avaliacoes = $avalStmt->fetchAll();
           <?php if ($av['resposta']): ?>
           <div style="background:var(--bg);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:8px 12px;margin-top:10px;">
             <strong style="font-size:11px;color:var(--gold);display:block;margin-bottom:2px;">🏢 Resposta da empresa</strong>
-            <p style="font-size:12px;color:var(--text-muted);"><?= htmlspecialchars(mb_substr($av['resposta'],0,150)).(strlen($av['resposta'])>150?'…':'') ?></p>
+            <p style="font-size:12px;color:var(--text-muted);"><?= htmlspecialchars(mb_substr($av['resposta'],0,150)).(mb_strlen($av['resposta'])>150?'…':'') ?></p>
           </div>
           <?php endif; ?>
         </div>

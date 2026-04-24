@@ -21,8 +21,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     elseif (!is_numeric($valor)) $erros['valor'] = 'Valor inválido.';
 
     if (empty($erros)) {
-        $stmt = $pdo->prepare("INSERT INTO servicos (nome, descricao, valor, duracao_estimada, categoria, status) VALUES (?,?,?,?,?,?)");
-        if ($stmt->execute([$nome, $descricao, $valor, $duracao_estimada ?: null, $categoria, $status])) {
+        $empresa_id = $_SESSION['empresa_id'];
+        $stmt = $pdo->prepare("INSERT INTO servicos (empresa_id, nome, descricao, valor, duracao_estimada, categoria, status) VALUES (?,?,?,?,?,?,?)");
+        if ($stmt->execute([$empresa_id, $nome, $descricao, $valor, $duracao_estimada ?: null, $categoria, $status])) {
             header('Location: index.php?msg='.urlencode('Serviço cadastrado com sucesso!').'&type=success'); exit;
         }
         $erros['geral'] = 'Erro ao cadastrar serviço.';

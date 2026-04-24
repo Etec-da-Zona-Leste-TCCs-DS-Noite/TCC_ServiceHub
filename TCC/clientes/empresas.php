@@ -210,7 +210,7 @@ $categorias = $pdo->query(
                 <?php $av = mediaAvaliacoes($pdo, $emp['id']); ?>
                 <?php if ($av['total'] > 0): ?>
                 <div style="margin:8px 0 6px;display:flex;align-items:center;gap:6px;">
-                  <?= starRating($av['nota'] ?? $av['media'] ?? 0, true) ?>
+                  <?= starRating($av['media'] ?? 0, true) ?>
                   <span style="font-size:12px;color:var(--text-muted);"><?= number_format($av['media'],1,',','') ?> (<?=$av['total']?>)</span>
                 </div>
                 <?php endif; ?>

@@ -127,11 +127,7 @@ ALTER TABLE clientes ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) NULL;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;
 
--- ══════════════════════════════════════════
---  SISTEMA DE CHAT  (novo)
--- ══════════════════════════════════════════
 
--- Uma conversa vincula um cliente a uma empresa (e opcionalmente a um orçamento)
 CREATE TABLE IF NOT EXISTS conversas (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id   INT NOT NULL,

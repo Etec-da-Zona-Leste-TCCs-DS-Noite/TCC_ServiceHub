@@ -20,8 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erros['email'] = 'E-mail inválido.';
 
     if (empty($erros)) {
-        $stmt = $pdo->prepare("INSERT INTO clientes (nome, email, telefone, endereco) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$nome, $email, $telefone, $endereco])) {
+        // Gera uma senha aleatória temporária (o cliente pode redefinir depois)
+        $senha_temp = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("INSERT INTO clientes (nome, email, senha, telefone, endereco) VALUES (?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nome, $email, $senha_temp, $telefone, $endereco])) {
             header('Location: index.php?msg=' . urlencode('Cliente cadastrado com sucesso!') . '&type=success');
             exit;
         } else {
