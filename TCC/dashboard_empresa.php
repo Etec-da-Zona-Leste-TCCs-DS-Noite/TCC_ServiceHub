@@ -80,7 +80,7 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <h1>Bem-vindo, <?= htmlspecialchars($empresa['nome_empresa']) ?>!</h1>
       <p>Gerencie seus serviços e acompanhe os orçamentos.</p>
     </div>
-    <a href="empresas/meus_servicos.php?action=create" class="btn btn-primary">+ Novo Serviço</a>
+    <a href="servicos/create.php" class="btn btn-primary">+ Novo Serviço</a>
   </div>
 
   <div class="stats-grid">
@@ -120,7 +120,7 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
 
   <h2 class="section-heading">Ações Rápidas</h2>
   <div class="quick-actions">
-    <a href="empresas/meus_servicos.php?action=create" class="qa-card">
+    <a href="servicos/create.php" class="qa-card">
       <span class="qa-icon">➕</span><strong>Novo Serviço</strong><small>Adicionar serviço</small>
     </a>
     <a href="empresas/meus_servicos.php" class="qa-card">
