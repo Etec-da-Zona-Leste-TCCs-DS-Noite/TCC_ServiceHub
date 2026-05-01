@@ -42,7 +42,7 @@ $itens = $itens->fetchAll();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status'])) {
     $novoStatus = $_POST['status'];
     $allowed    = ['pendente','aprovado','rejeitado','concluido','expirado'];
-    if ($is_cliente) $allowed = ['rejeitado']; // cliente só pode rejeitar (cancelar)
+    if ($is_cliente) $allowed = ['rejeitado','concluido']; // cliente pode cancelar ou confirmar conclusão
     if (in_array($novoStatus, $allowed)) {
         $pdo->prepare("UPDATE orcamentos SET status=? WHERE id=?")->execute([$novoStatus, $id]);
         header('Location: view.php?id='.$id.'&msg='.urlencode('Status atualizado!').'&type=success'); exit;

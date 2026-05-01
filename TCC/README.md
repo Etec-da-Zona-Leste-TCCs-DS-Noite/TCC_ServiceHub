@@ -136,8 +136,26 @@ servicehub/
 ## 🛠️ Melhorias futuras sugeridas
 
 - [ ] Upload de logo para empresas
-- [ ] Sistema de avaliações / reviews
+- [x] Sistema de avaliações / reviews ✅
 - [ ] Notificações por e-mail (configurar SMTP)
-- [ ] Chat entre cliente e empresa
-- [ ] Painel administrativo (admin)
+- [x] Chat entre cliente e empresa ✅
+- [x] Painel administrativo (admin) ✅ — acesse em `/admin/` (usuário: `admin`, senha: `admin@servicehub2024`)
 - [ ] Exportação de relatórios em PDF
+---
+
+## 📝 Changelog — Correções e Adições
+
+### 🐛 Bugs corrigidos
+- **`servicos/index.php`** — corrigido bug crítico onde a lista de serviços mostrava serviços de **todas** as empresas em vez de apenas os da empresa logada
+- **`css/estilo.css`** — adicionados aliases de variáveis CSS faltantes (`--radius`, `--radius-sm`, `--shadow`, `--transition`, `--teal`) que faziam o layout ficar sem borda-arredondada e sem sombras em vários componentes
+- **`orcamentos/view.php`** — cliente agora pode marcar orçamento como "concluído" quando está aprovado, além de rejeitar/cancelar
+
+### ✨ Novidades implementadas
+- **Painel Admin** (`/admin/`) — dashboard completo com:
+  - Login separado (usuário: `admin`, senha: `admin@servicehub2024`)
+  - Dashboard com KPIs globais e gráfico de faturamento mensal
+  - Gerenciamento de empresas (ativar/desativar/excluir)
+  - Gerenciamento de clientes (listagem/excluir)
+  - Visão global de todos os orçamentos com filtros
+  - Moderação de avaliações
+  - Listagem global de todos os serviços

@@ -1,7 +1,14 @@
 <?php
 session_start();
 require_once '../includes/config.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+
+// Redireciona se já estiver logado
+if (isset($_SESSION['tipo_usuario'])) {
+    header('Location: ' . ($_SESSION['tipo_usuario'] === 'cliente' ? '../dashboard_cliente.php' : '../dashboard_empresa.php'));
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome            = cleanInput($_POST['nome']            ?? '');

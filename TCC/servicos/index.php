@@ -11,8 +11,14 @@ $limit  = 10;
 $offset = ($page - 1) * $limit;
 $catFiltro = trim($_GET['categoria'] ?? '');
 
-$where  = $catFiltro ? "WHERE categoria = ?" : "WHERE 1=1";
-$params = $catFiltro ? [$catFiltro] : [];
+$eid = (int)$_SESSION['empresa_id'];
+
+$where  = 'WHERE empresa_id = ?';
+$params = [$eid];
+if ($catFiltro !== '') {
+    $where   .= ' AND categoria = ?';
+    $params[] = $catFiltro;
+}
 
 $total      = $pdo->prepare("SELECT COUNT(*) FROM servicos $where");
 $total->execute($params);
@@ -27,7 +33,9 @@ $stmt->bindValue(count($params) + 2, (int)$offset, PDO::PARAM_INT);
 $stmt->execute();
 $servicos = $stmt->fetchAll();
 
-$categorias = $pdo->query("SELECT DISTINCT categoria FROM servicos WHERE categoria IS NOT NULL AND categoria != '' ORDER BY categoria")->fetchAll(PDO::FETCH_COLUMN);
+$categorias = $pdo->prepare("SELECT DISTINCT categoria FROM servicos WHERE empresa_id = ? AND categoria IS NOT NULL AND categoria != '' ORDER BY categoria");
+$categorias->execute([$eid]);
+$categorias = $categorias->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -38,18 +46,19 @@ $categorias = $pdo->query("SELECT DISTINCT categoria FROM servicos WHERE categor
   <link rel="stylesheet" href="../css/estilo.css">
 </head>
 <body>
-<header class="main-header">
-  <div class="header-content">
-    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><p>Gestão de Serviços &amp; Orçamentos</p></div>
-    <nav class="main-nav"><ul>
-      <li><a href="../index.php">Início</a></li>
-      <li><a href="index.php" class="active">Serviços</a></li>
-      <li><a href="../clientes/index.php">Clientes</a></li>
-      <li><a href="../orcamentos/index.php">Orçamentos</a></li>
-      <li><a href="../relatorios/index.php">Relatórios</a></li>
-    </ul></nav>
+<nav class="dash-nav" style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%);border-bottom:1px solid rgba(201,168,76,.2);position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3);">
+  <div class="inner" style="max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px;">
+    <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1><small style="font-size:11px;color:var(--slate);display:block;">Área da Empresa</small></div>
+    <button class="hamburger" onclick="document.querySelector('.nav-items-svc').classList.toggle('open')">☰</button>
+    <div class="nav-items nav-items-svc" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <a href="../dashboard_empresa.php" style="color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);transition:all var(--ease);text-decoration:none;">Início</a>
+      <a href="index.php" style="color:#fff;background:rgba(201,168,76,.18);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);text-decoration:none;">Serviços</a>
+      <a href="../empresas/meus_servicos.php" style="color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);text-decoration:none;">Orçamentos</a>
+      <a href="../relatorios/index.php" style="color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);text-decoration:none;">Relatórios</a>
+      <a href="../logout.php" style="color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--r-sm);text-decoration:none;">Sair</a>
+    </div>
   </div>
-</header>
+</nav>
 
 <div class="container">
   <div class="page-title-row">

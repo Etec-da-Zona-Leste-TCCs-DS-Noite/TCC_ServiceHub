@@ -186,3 +186,11 @@ ALTER TABLE clientes
 UPDATE empresas SET latitude = -23.5505, longitude = -46.6333 WHERE email = 'contato@techsolutions.com';
 UPDATE empresas SET latitude = -23.5629, longitude = -46.6544 WHERE email = 'contato@designpro.com';
 UPDATE empresas SET latitude = -23.5475, longitude = -46.6361 WHERE email = 'contato@suportetotal.com';
+
+-- ══════════════════════════════════════════
+--  PAINEL ADMIN (novo)
+-- ══════════════════════════════════════════
+-- Acesso: /admin/login.php
+-- Usuário: admin  |  Senha: admin@servicehub2024
+-- NOTA: Em produção, troque a senha e atualize o hash em admin/login.php
+
