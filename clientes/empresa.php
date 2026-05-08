@@ -227,7 +227,7 @@ $categorias = $pdo->query(
                     <p><i class="fas fa-phone"></i> <?= htmlspecialchars($emp['telefone'] ?? 'Não informado') ?></p>
                     <p><i class="fas fa-briefcase"></i> <?= $totalServicos ?> serviço(s) disponível(is)</p>
                 </div>
-                <a href="empresa.php?id=<?= $emp['id'] ?>" class="btn-view">Ver Serviços</a>
+                <a href="detalhe_empresa.php?id=<?= $emp['id'] ?>" class="btn-view">Ver Serviços</a>
             </div>
         </div>
         <?php endforeach; ?>

@@ -14,6 +14,7 @@ function formatDate($date, $format = 'd/m/Y') {
 }
 
 function formatMoney($value) {
+    if ($value === null || $value === '') return '<span style="color:#888;font-style:italic;">A definir</span>';
     return 'R$ ' . number_format($value ?? 0, 2, ',', '.');
 }
 

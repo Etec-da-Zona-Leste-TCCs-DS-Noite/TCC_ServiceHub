@@ -19,6 +19,38 @@ if ($is_cliente) {
     $cliente_id_fixo = null;
 }
 
+// ── AUTO-GERAÇÃO: cliente solicitando serviço com valor já definido ──
+if ($is_cliente && $pre_servico_id > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $sAuto = $pdo->prepare("SELECT * FROM servicos WHERE id = ? AND status = 1");
+    $sAuto->execute([$pre_servico_id]);
+    $sAuto = $sAuto->fetch();
+
+    if ($sAuto && $sAuto['valor'] !== null) {
+        // Valor definido → gera orçamento automaticamente
+        try {
+            $pdo->beginTransaction();
+            $data_orc = date('Y-m-d');
+            $data_val = date('Y-m-d', strtotime('+30 days'));
+            $stmt = $pdo->prepare(
+                "INSERT INTO orcamentos (cliente_id, empresa_id, data_orcamento, data_validade, valor_total, observacoes, status)
+                 VALUES (?, ?, ?, ?, ?, '', 'pendente')"
+            );
+            $stmt->execute([$cliente_id_fixo, $sAuto['empresa_id'], $data_orc, $data_val, $sAuto['valor']]);
+            $oid = $pdo->lastInsertId();
+            $pdo->prepare(
+                "INSERT INTO orcamento_itens (orcamento_id, servico_id, quantidade, valor_unitario, subtotal) VALUES (?,?,1,?,?)"
+            )->execute([$oid, $pre_servico_id, $sAuto['valor'], $sAuto['valor']]);
+            $pdo->commit();
+            header('Location: ../dashboard_cliente.php?msg='.urlencode('Orçamento gerado com sucesso! A empresa entrará em contato.').'&type=success');
+            exit;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            // Se falhar, mostra o formulário normalmente
+        }
+    }
+    // Valor NULL → deixa passar para o formulário (sob consulta)
+}
+
 $servicos = $pdo->query("SELECT s.*, e.nome_empresa FROM servicos s JOIN empresas e ON e.id = s.empresa_id WHERE s.status=1 ORDER BY e.nome_empresa, s.nome")->fetchAll();
 
 $erros = [];
@@ -222,8 +254,10 @@ function buildOptions(selectedId) {
       lastEmp = emp;
     }
     const sel = id == selectedId ? ' selected' : '';
-    const val = parseFloat(s.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    html += `<option value="${id}" data-valor="${s.valor}"${sel}>${s.nome} — R$ ${val}</option>`;
+    const valorLabel = s.valor !== null
+      ? 'R$ ' + parseFloat(s.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
+      : 'A definir';
+    html += `<option value="${id}" data-valor="${s.valor ?? ''}"${sel}>${s.nome} — ${valorLabel}</option>`;
   }
   if (lastEmp) html += '</optgroup>';
   return html;
@@ -251,15 +285,27 @@ function removeRow(btn) {
 
 function calcTotal() {
   let total = 0;
+  let temADefinir = false;
   document.querySelectorAll('.item-row').forEach(row => {
     const sel = row.querySelector('select');
     const qty = row.querySelector('input[type=number]');
     if (sel && sel.value && qty) {
       const opt = sel.options[sel.selectedIndex];
-      total += (parseFloat(opt.dataset.valor)||0) * (parseInt(qty.value)||0);
+      if (opt.dataset.valor === '') {
+        temADefinir = true;
+      } else {
+        total += (parseFloat(opt.dataset.valor)||0) * (parseInt(qty.value)||0);
+      }
     }
   });
-  document.getElementById('totalVal').textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const el = document.getElementById('totalVal');
+  if (temADefinir) {
+    el.textContent = 'Parcialmente a definir';
+    el.style.fontSize = '16px';
+  } else {
+    el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    el.style.fontSize = '';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

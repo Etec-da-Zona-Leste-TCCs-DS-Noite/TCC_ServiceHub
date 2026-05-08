@@ -16,19 +16,24 @@ if (!$servico) { header('Location: index.php?msg='.urlencode('Serviço não enco
 
 $erros = [];
 $nome=$servico['nome']; $descricao=$servico['descricao']; $categoria=$servico['categoria'];
-$valor=number_format($servico['valor'],2,',','.'); $duracao_estimada=$servico['duracao_estimada']; $status=$servico['status'];
+$valor_a_definir = ($servico['valor'] === null);
+$valor = $valor_a_definir ? '' : number_format($servico['valor'],2,',','.');
+$duracao_estimada=$servico['duracao_estimada']; $status=$servico['status'];
 
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     $nome             = cleanInput($_POST['nome'] ?? '');
     $descricao        = cleanInput($_POST['descricao'] ?? '');
     $categoria        = cleanInput($_POST['categoria'] ?? '');
-    $valor            = str_replace(',','.',($_POST['valor'] ?? ''));
+    $valor_a_definir  = isset($_POST['valor_a_definir']);
+    $valor            = $valor_a_definir ? null : str_replace(',','.',($_POST['valor'] ?? ''));
     $duracao_estimada = (int)($_POST['duracao_estimada'] ?? 0);
     $status           = (int)($_POST['status'] ?? 1);
 
-    if (empty($nome))  $erros['nome']  = 'Nome é obrigatório.';
-    if ($valor==='')   $erros['valor'] = 'Valor é obrigatório.';
-    elseif (!is_numeric($valor)) $erros['valor'] = 'Valor inválido.';
+    if (empty($nome)) $erros['nome'] = 'Nome é obrigatório.';
+    if (!$valor_a_definir) {
+        if ($valor === '' || $valor === null) $erros['valor'] = 'Informe o valor ou marque "Valor a definir".';
+        elseif (!is_numeric($valor))          $erros['valor'] = 'Valor inválido.';
+    }
 
     if (empty($erros)) {
         $u = $pdo->prepare("UPDATE servicos SET nome=?,descricao=?,valor=?,duracao_estimada=?,categoria=?,status=? WHERE id=?");
@@ -97,8 +102,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
         <div class="form-row">
           <div class="form-group">
-            <label>Valor (R$) *</label>
-            <input type="text" name="valor" class="form-control" value="<?= htmlspecialchars($valor) ?>" required>
+            <label>Valor (R$)</label>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <input type="checkbox" name="valor_a_definir" id="valor_a_definir"
+                     <?= $valor_a_definir ? 'checked' : '' ?>
+                     onchange="toggleValor(this)">
+              <label for="valor_a_definir" style="margin:0;font-weight:normal;cursor:pointer;">
+                Valor a definir (orçamento sob consulta)
+              </label>
+            </div>
+            <input type="text" name="valor" id="valor_input" class="form-control"
+                   value="<?= htmlspecialchars($valor ?? '') ?>"
+                   placeholder="0,00"
+                   <?= $valor_a_definir ? 'disabled style="background:#f0f0f0;color:#999;"' : '' ?>>
             <?php if (isset($erros['valor'])): ?><span class="error-text"><?= $erros['valor'] ?></span><?php endif; ?>
           </div>
           <div class="form-group">
@@ -118,5 +134,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     </form>
   </div>
 </div>
+<script>
+function toggleValor(cb) {
+  const inp = document.getElementById('valor_input');
+  inp.disabled = cb.checked;
+  inp.style.background = cb.checked ? '#f0f0f0' : '';
+  inp.style.color = cb.checked ? '#999' : '';
+  if (cb.checked) inp.value = '';
+}
+</script>
 </body>
 </html>

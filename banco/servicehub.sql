@@ -36,7 +36,7 @@ CREATE TABLE servicos (
     empresa_id INT,
     nome VARCHAR(100) NOT NULL,
     descricao TEXT,
-    valor DECIMAL(10,2) NOT NULL,
+    valor DECIMAL(10,2) NULL COMMENT 'NULL = valor a definir',
     duracao_estimada INT COMMENT 'Duração em horas',
     categoria VARCHAR(50),
     status TINYINT DEFAULT 1 COMMENT '1=Ativo, 0=Inativo',
@@ -95,37 +95,16 @@ CREATE TABLE avaliacoes (
     UNIQUE KEY uq_avaliacao_orcamento (orcamento_id)  -- uma avaliação por orçamento
 );
 
--- Dados de exemplo
-INSERT INTO clientes (nome, email, senha, telefone) VALUES
-('João Silva',   'joao@email.com',  MD5('123456'), '(11) 99999-1111'),
-('Maria Santos', 'maria@email.com', MD5('123456'), '(11) 99999-2222');
-
-INSERT INTO empresas (nome_empresa, email, senha, cnpj, telefone, descricao) VALUES
-('Tech Solutions', 'contato@techsolutions.com', MD5('123456'), '12.345.678/0001-90', '(11) 3333-4444', 'Soluções em tecnologia e desenvolvimento web'),
-('Design Pro',     'contato@designpro.com',     MD5('123456'), '98.765.432/0001-10', '(11) 5555-6666', 'Agência de design gráfico e marketing digital'),
-('Suporte Total',  'contato@suportetotal.com',  MD5('123456'), '45.678.901/0001-23', '(11) 7777-8888', 'Suporte técnico e manutenção de sistemas');
-
-INSERT INTO servicos (empresa_id, nome, descricao, valor, categoria) VALUES
-(1, 'Desenvolvimento Web',  'Criação de sites e sistemas web',  1500.00, 'Desenvolvimento'),
-(1, 'Manutenção de Sites',  'Atualizações e correções',          300.00, 'Manutenção'),
-(2, 'Design de Logotipo',   'Criação de identidade visual',       500.00, 'Design'),
-(2, 'Marketing Digital',    'Gestão de redes sociais',           1000.00, 'Marketing'),
-(3, 'Suporte Remoto',       'Atendimento técnico remoto',         200.00, 'Suporte');
-
-INSERT INTO orcamentos (cliente_id, servico_id, empresa_id, quantidade, valor_total, status, data_orcamento) VALUES
-(1, 1, 1, 1, 1500.00, 'aprovado',  CURDATE()),
-(2, 3, 2, 1,  500.00, 'pendente',  CURDATE()),
-(1, 5, 3, 2,  400.00, 'concluido', CURDATE());
-
--- Avaliação de exemplo para o orçamento concluído
-INSERT INTO avaliacoes (orcamento_id, cliente_id, empresa_id, nota, titulo, comentario) VALUES
-(3, 1, 3, 5, 'Excelente atendimento!', 'O suporte foi rápido e eficiente. Recomendo!');
+-- Banco iniciado sem dados de exemplo. Cadastre empresas, clientes e serviços pelo sistema.
 
 -- Colunas para recuperação de senha
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) NULL;
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) NULL;
 ALTER TABLE empresas ADD COLUMN IF NOT EXISTS reset_expira DATETIME NULL;
+
+-- Permitir valor NULL em serviços (valor a definir)
+ALTER TABLE servicos MODIFY COLUMN valor DECIMAL(10,2) NULL COMMENT 'NULL = valor a definir';
 
 
 CREATE TABLE IF NOT EXISTS conversas (
@@ -151,12 +130,7 @@ CREATE TABLE IF NOT EXISTS mensagens (
     FOREIGN KEY (conversa_id) REFERENCES conversas(id) ON DELETE CASCADE
 );
 
--- Dados de exemplo
-INSERT IGNORE INTO conversas (cliente_id, empresa_id, orcamento_id) VALUES (1, 3, 3);
-INSERT IGNORE INTO mensagens (conversa_id, remetente, conteudo) VALUES
-  (1, 'cliente',  'Olá! Queria saber mais detalhes sobre o suporte remoto.'),
-  (1, 'empresa',  'Olá João! O suporte remoto inclui atendimento via TeamViewer. Posso agendar para quando precisar.'),
-  (1, 'cliente',  'Ótimo! O serviço já foi concluído, ficou muito satisfeito!');
+-- Sem dados de exemplo para conversas e mensagens.
 
 -- Tabela de status "digitando" (auto-criada via typing.php, mas aqui para deploy completo)
 CREATE TABLE IF NOT EXISTS chat_typing (
@@ -182,10 +156,7 @@ ALTER TABLE clientes
     ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7) NULL,
     ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL;
 
--- Atualiza coordenadas das empresas de exemplo (São Paulo, SP)
-UPDATE empresas SET latitude = -23.5505, longitude = -46.6333 WHERE email = 'contato@techsolutions.com';
-UPDATE empresas SET latitude = -23.5629, longitude = -46.6544 WHERE email = 'contato@designpro.com';
-UPDATE empresas SET latitude = -23.5475, longitude = -46.6361 WHERE email = 'contato@suportetotal.com';
+-- Coordenadas serão preenchidas automaticamente via geocodificação ao cadastrar endereço.
 
 -- ══════════════════════════════════════════
 --  PAINEL ADMIN (novo)

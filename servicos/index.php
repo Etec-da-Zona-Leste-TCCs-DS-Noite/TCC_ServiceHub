@@ -97,7 +97,7 @@ $categorias = $categorias->fetchAll(PDO::FETCH_COLUMN);
             <?php endif; ?>
           </td>
           <td><?= $s['categoria'] ? "<span class='badge badge-primary'>".htmlspecialchars($s['categoria'])."</span>" : '<span style="color:var(--text-muted)">—</span>' ?></td>
-          <td><strong style="color:var(--teal);"><?= formatMoney($s['valor']) ?></strong></td>
+          <td><strong style="color:var(--teal);"><?= $s['valor'] !== null ? formatMoney($s['valor']) : '<span style="color:#888;font-style:italic;">A definir</span>' ?></strong></td>
           <td><?= $s['duracao_estimada'] ? $s['duracao_estimada'].'h' : '—' ?></td>
           <td><?= $s['status'] ? "<span class='badge badge-aprovado'>Ativo</span>" : "<span class='badge badge-rejeitado'>Inativo</span>" ?></td>
           <td>
