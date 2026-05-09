@@ -57,14 +57,34 @@ $avaliacoes = $stmtAv->fetchAll();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .navbar {
-            background: linear-gradient(135deg, #1a4a6f 0%, #0a2b3e 100%);
-            padding: 15px 0;
+            background: linear-gradient(135deg, #0b1f35 0%, #1a3354 100%);
+            padding: 0;
             position: sticky; top: 0; z-index: 100;
+            border-bottom: 1px solid rgba(200,168,75,.15);
+            box-shadow: 0 2px 20px rgba(11,31,53,.35);
+            min-height: 64px;
         }
         .navbar .inner {
-            max-width: 1280px; margin: 0 auto; padding: 0 20px;
+            max-width: 1280px; margin: 0 auto; padding: 0 24px;
             display: flex; justify-content: space-between; align-items: center;
+            min-height: 64px; gap: 16px;
         }
+        .navbar .nav-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px; font-weight: 800;
+            color: #fff; letter-spacing: -.5px;
+        }
+        .navbar .nav-logo span { color: #c8a84b; }
+        .navbar .nav-links { display: flex; gap: 4px; align-items: center; }
+        .navbar .nav-links a {
+            color: #cbd5e1; font-size: 13px; font-weight: 500;
+            padding: 7px 13px; border-radius: 8px;
+            text-decoration: none; display: flex; align-items: center; gap: 7px;
+            transition: all .2s ease; white-space: nowrap;
+        }
+        .navbar .nav-links a:hover { color: #fff; background: rgba(200,168,75,.18); }
+        .navbar .nav-links a i { font-size: 13px; transition: transform .2s ease; }
+        .navbar .nav-links a:hover i { transform: scale(1.15); }
         .main-content { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
 
         /* Hero da empresa */
@@ -159,18 +179,25 @@ $avaliacoes = $stmtAv->fetchAll();
         @media (max-width: 600px) {
             .empresa-hero { padding: 25px 20px; }
             .navbar .inner { flex-direction: column; gap: 10px; }
+            .servicos-grid { grid-template-columns: 1fr; }
+            .servico-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .btn-solicitar { width: 100%; text-align: center; display: block; }
+        }
+        @media (max-width: 400px) {
+            .empresa-hero h1 { font-size: 18px; }
+            .empresa-meta { flex-direction: column; gap: 8px; }
         }
     </style>
 </head>
 <body>
 <nav class="navbar">
     <div class="inner">
-        <h2 style="color:white;">Service<span style="color:#d4af37;">Hub</span></h2>
-        <div>
-            <a href="empresas.php" style="color:white;margin-right:20px;">
+        <div class="nav-logo">Service<span>Hub</span></div>
+        <div class="nav-links">
+            <a href="empresas.php">
                 <i class="fas fa-arrow-left"></i> Voltar
             </a>
-            <a href="../logout.php" style="color:white;">
+            <a href="../logout.php">
                 <i class="fas fa-sign-out-alt"></i> Sair
             </a>
         </div>

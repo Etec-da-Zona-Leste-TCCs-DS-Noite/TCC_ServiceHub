@@ -1368,3 +1368,235 @@ tbody tr:hover { background: var(--surface-2); }
 
 /* ── Stars ──────────────────────────────────────────────── */
 .stars { display: inline-flex; align-items: center; gap: 1px; line-height: 1; }
+/* ============================================================
+   ServiceHub — Responsive & Icon Improvements (v2.1)
+   ============================================================ */
+
+/* ── Icon containers — tamanhos responsivos ─────────────── */
+.icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  flex-shrink: 0;
+}
+
+/* Sizes */
+.icon-xs  { width: 28px; height: 28px; font-size: 13px; }
+.icon-sm  { width: 36px; height: 36px; font-size: 16px; }
+.icon-md  { width: 46px; height: 46px; font-size: 20px; }
+.icon-lg  { width: 56px; height: 56px; font-size: 24px; }
+.icon-xl  { width: 68px; height: 68px; font-size: 28px; }
+
+/* Variants */
+.icon-gold  { background: var(--gold-dim);  color: var(--gold-dk); }
+.icon-navy  { background: rgba(11,31,53,.12); color: var(--navy); }
+.icon-green { background: var(--green-bg);  color: var(--green-lt); }
+.icon-red   { background: var(--red-bg);    color: var(--red-lt); }
+.icon-blue  { background: var(--blue-bg);   color: var(--blue-lt); }
+.icon-amber { background: var(--amber-bg);  color: var(--amber-lt); }
+
+/* ── Stat cards – icon melhorado ────────────────────────── */
+.stat-card .stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--r-sm);
+  background: var(--gold-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: var(--gold-dk);
+  transition: all var(--ease);
+}
+
+.stat-card:hover .stat-icon {
+  background: var(--gold);
+  color: var(--navy);
+  transform: scale(1.08);
+}
+
+@media (max-width: 480px) {
+  .stat-card { padding: 16px; }
+  .stat-card .stat-icon { width: 40px; height: 40px; font-size: 18px; margin-bottom: 10px; }
+  .stat-card .stat-number { font-size: 24px; }
+}
+
+/* ── Quick-action cards — icon responsivo ───────────────── */
+.qa-icon {
+  width: 52px;
+  height: 52px;
+  font-size: 23px;
+  border-radius: var(--r-sm);
+  background: var(--gold-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  color: var(--gold-dk);
+  transition: all var(--ease);
+}
+
+.qa-card:hover .qa-icon {
+  background: var(--gold);
+  color: var(--navy);
+  transform: scale(1.1) rotate(-3deg);
+}
+
+@media (max-width: 480px) {
+  .quick-actions { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .qa-card { padding: 14px 10px; }
+  .qa-icon { width: 42px; height: 42px; font-size: 19px; }
+  .qa-card p { font-size: 11.5px; }
+}
+
+/* ── Nav icons – espaçamento e tamanho ──────────────────── */
+.nav-items a i,
+.nav-items a .fas,
+.nav-items a .far,
+.nav-items a .fab {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .nav-items a i { font-size: 16px; }
+}
+
+/* ── Botões com ícone — gap melhorado ───────────────────── */
+.btn i, .btn .fas, .btn .far, .btn .fab {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  .btn { padding: 8px 14px; font-size: 12.5px; }
+  .btn-lg { padding: 11px 20px; font-size: 14px; }
+}
+
+/* ── Formulário de orçamento — item-row responsivo ──────── */
+@media (max-width: 600px) {
+  .item-row {
+    grid-template-columns: 1fr 72px 36px !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .item-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .item-row .btn-remove {
+    width: 100% !important;
+    height: 32px !important;
+  }
+}
+
+/* ── Total preview responsivo ───────────────────────────── */
+.total-preview {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .total-preview { flex-direction: column; gap: 4px; align-items: flex-start; }
+  .total-preview .val { font-size: 22px !important; }
+}
+
+/* ── Empresa hero responsivo (detalhe_empresa) ──────────── */
+.empresa-hero {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .empresa-hero { padding: 20px 16px !important; gap: 16px !important; }
+  .empresa-hero h1 { font-size: 20px !important; }
+  .empresa-meta { gap: 10px !important; font-size: 12px !important; }
+}
+
+/* ── Serviços grid responsivo ───────────────────────────── */
+@media (max-width: 480px) {
+  .servicos-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .servico-footer {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .btn-solicitar {
+    width: 100%;
+    text-align: center;
+    display: block;
+  }
+}
+
+/* ── Dashboard cliente — seções responsivas ─────────────── */
+@media (max-width: 640px) {
+  .two-col { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+
+@media (max-width: 360px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Página de orçamento view — responsiva ──────────────── */
+@media (max-width: 600px) {
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .total-bar { flex-direction: column; align-items: flex-start; }
+  .total-bar .total-value { font-size: 22px; }
+}
+
+@media (max-width: 400px) {
+  .info-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Navbar — logo responsivo ───────────────────────────── */
+@media (max-width: 360px) {
+  .logo h1 { font-size: 17px; }
+  .logo p { display: none; }
+}
+
+/* ── Tabelas — overflow elegante em mobile ──────────────── */
+@media (max-width: 768px) {
+  .table-wrap { border-radius: var(--r-sm); }
+  td, th { padding: 10px 12px; }
+  th { font-size: 10px; letter-spacing: .5px; }
+}
+
+/* ── Badge icons ────────────────────────────────────────── */
+.badge i { font-size: 9px; }
+
+/* ── Form section title com ícone ───────────────────────── */
+.form-section-title i {
+  color: var(--gold);
+  font-size: 14px;
+}
+
+/* ── Floating action helpers ────────────────────────────── */
+@media (max-width: 600px) {
+  .page-title-row { flex-direction: column; align-items: flex-start; }
+  .page-title-row h1 { font-size: 20px; }
+}
+
+/* ── Smooth hover nos ícones de navegação do detalhe ─────── */
+.navbar a i,
+.navbar a .fas {
+  transition: transform var(--ease);
+}
+.navbar a:hover i,
+.navbar a:hover .fas {
+  transform: scale(1.15);
+}
+
+/* ── Focus visible melhorado ────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}

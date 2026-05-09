@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
             $valor_total = 0;
+            $tem_valor_a_definir = false;
             $itens = [];
             $empresa_id_orc = null;
             foreach ($servicos_ids as $idx => $sid) {
@@ -81,17 +82,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $s->execute([$sid]); $s = $s->fetch();
                 if ($s) {
                     $qty  = max(1, (int)($quantidades[$idx] ?? 1));
-                    $sub  = $s['valor'] * $qty;
-                    $valor_total += $sub;
+                    if ($s['valor'] === null) {
+                        $tem_valor_a_definir = true;
+                        $sub = null;
+                    } else {
+                        $sub = (float)$s['valor'] * $qty;
+                        $valor_total += $sub;
+                    }
                     $itens[] = [$sid, $qty, $s['valor'], $sub];
                     if ($empresa_id_orc === null) $empresa_id_orc = $s['empresa_id'];
                 }
             }
+            // Se todos os serviços são "a definir", valor_total fica NULL no banco
+            $valor_total_db = $tem_valor_a_definir && $valor_total == 0 ? null : $valor_total;
             $stmt = $pdo->prepare(
                 "INSERT INTO orcamentos (cliente_id, empresa_id, data_orcamento, data_validade, valor_total, observacoes, status)
                  VALUES (?, ?, ?, ?, ?, ?, 'pendente')"
             );
-            $stmt->execute([$cliente_id, $empresa_id_orc, $data_orcamento, $data_validade, $valor_total, $observacoes]);
+            $stmt->execute([$cliente_id, $empresa_id_orc, $data_orcamento, $data_validade, $valor_total_db, $observacoes]);
             $oid = $pdo->lastInsertId();
             $ins = $pdo->prepare(
                 "INSERT INTO orcamento_itens (orcamento_id, servico_id, quantidade, valor_unitario, subtotal) VALUES (?,?,?,?,?)"
@@ -122,19 +130,34 @@ $back_url = $is_cliente
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Novo Orçamento — ServiceHub</title>
   <link rel="stylesheet" href="../css/estilo.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%); border-bottom:1px solid rgba(201,168,76,.2); position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
+    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%); border-bottom:1px solid rgba(200,168,75,.2); position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
     .dash-nav .inner { max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px; }
     .nav-items { display:flex;gap:6px;flex-wrap:wrap;align-items:center; }
-    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--radius-sm);transition:all var(--transition);text-decoration:none; }
-    .nav-items a:hover { color:#fff;background:rgba(201,168,76,.18); }
-    .item-row { background:#f8fafc;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr 100px 36px;gap:10px;align-items:center; }
+    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 14px;border-radius:var(--radius-sm);transition:all var(--transition);text-decoration:none;display:flex;align-items:center;gap:6px; }
+    .nav-items a:hover { color:#fff;background:rgba(200,168,75,.18); }
+    .nav-items a i { font-size:13px;transition:transform .2s;flex-shrink:0; }
+    .nav-items a:hover i { transform:scale(1.1); }
+    .item-row { background:#f8fafc;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr 100px 36px;gap:10px;align-items:center;transition:border-color .2s; }
+    .item-row:hover { border-color:rgba(200,168,75,.4); }
     .item-row select,.item-row input { margin:0; }
     .btn-remove { background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--red);cursor:pointer;font-size:16px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;transition:all var(--transition); }
     .btn-remove:hover { background:var(--red);color:#fff;border-color:var(--red); }
-    .total-preview { background:var(--navy);color:#fff;border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-top:6px; }
+    .total-preview { background:var(--navy);color:#fff;border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:10px; }
     .total-preview .lbl { font-size:13px;color:var(--slate); }
     .total-preview .val { font-size:28px;font-weight:700;color:var(--gold);font-family:'DM Sans',sans-serif; }
+    .aviso-consulta { background:#fffbeb;border:1.5px solid #f59e0b;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:10px;margin-top:10px;line-height:1.5; }
+    .aviso-consulta i { color:#f59e0b;font-size:16px;flex-shrink:0; }
+    @media (max-width:600px) {
+      .item-row { grid-template-columns:1fr 72px 36px;padding:10px 12px;gap:8px; }
+      .total-preview .val { font-size:22px; }
+      .total-preview { flex-direction:column;align-items:flex-start;gap:6px; }
+    }
+    @media (max-width:400px) {
+      .item-row { grid-template-columns:1fr;gap:8px; }
+      .btn-remove { width:100%;height:32px; }
+    }
   </style>
 </head>
 <body>
@@ -144,10 +167,10 @@ $back_url = $is_cliente
   <div class="inner">
     <div class="logo"><h1>Service<span class="logo-span">Hub</span></h1></div>
     <div class="nav-items">
-      <a href="../dashboard_cliente.php">Início</a>
-      <a href="../clientes/empresas.php">Empresas</a>
-      <a href="index.php">Meus Orçamentos</a>
-      <a href="../logout.php">Sair</a>
+      <a href="../dashboard_cliente.php"><i class="fas fa-home"></i> Início</a>
+      <a href="../clientes/empresas.php"><i class="fas fa-building"></i> Empresas</a>
+      <a href="index.php"><i class="fas fa-file-invoice-dollar"></i> Meus Orçamentos</a>
+      <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Sair</a>
     </div>
   </div>
 </nav>
@@ -177,7 +200,7 @@ $back_url = $is_cliente
 
     <form method="post" id="orcForm">
       <div class="form-section">
-        <div class="form-section-title">Dados do Orçamento</div>
+        <div class="form-section-title"><i class="fas fa-clipboard-list"></i> Dados do Orçamento</div>
 
         <?php if (!$is_cliente): ?>
         <div class="form-group">
@@ -213,26 +236,30 @@ $back_url = $is_cliente
       </div>
 
       <div class="form-section">
-        <div class="form-section-title">Serviços</div>
+        <div class="form-section-title"><i class="fas fa-tools"></i> Serviços</div>
         <?php if (isset($erros['servicos'])): ?><span class="error-text" style="display:block;margin-bottom:12px;"><?=$erros['servicos']?></span><?php endif; ?>
         <div id="items-container"></div>
-        <button type="button" class="btn btn-success btn-sm" style="margin-top:10px;" onclick="addRow()">+ Adicionar Serviço</button>
+        <button type="button" class="btn btn-success btn-sm" style="margin-top:10px;" onclick="addRow()"><i class="fas fa-plus"></i> Adicionar Serviço</button>
         <div class="total-preview" style="margin-top:16px;">
           <div class="lbl">Total do Orçamento</div>
           <div class="val" id="totalVal">R$ 0,00</div>
         </div>
+        <div id="avisoConsulta" class="aviso-consulta" style="display:none;">
+          <i class="fas fa-info-circle"></i>
+          <span>Este orçamento inclui serviço(s) com <strong>valor a combinar</strong>. A empresa entrará em contato para definir o preço final.</span>
+        </div>
       </div>
 
       <div class="form-section">
-        <div class="form-section-title">Observações</div>
+        <div class="form-section-title"><i class="fas fa-comment-alt"></i> Observações</div>
         <div class="form-group" style="margin-bottom:0;">
           <textarea name="observacoes" class="form-control" rows="3" placeholder="Informações adicionais…"><?= htmlspecialchars($observacoes) ?></textarea>
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;">
-        <button type="submit" class="btn btn-primary btn-lg">Criar Orçamento</button>
-        <a href="<?= $back_url ?>" class="btn btn-ghost btn-lg">Cancelar</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-check"></i> Criar Orçamento</button>
+        <a href="<?= $back_url ?>" class="btn btn-ghost btn-lg"><i class="fas fa-times"></i> Cancelar</a>
       </div>
     </form>
   </div>
@@ -291,20 +318,30 @@ function calcTotal() {
     const qty = row.querySelector('input[type=number]');
     if (sel && sel.value && qty) {
       const opt = sel.options[sel.selectedIndex];
-      if (opt.dataset.valor === '') {
+      if (opt && opt.dataset.valor === '') {
         temADefinir = true;
-      } else {
-        total += (parseFloat(opt.dataset.valor)||0) * (parseInt(qty.value)||0);
+      } else if (opt) {
+        total += (parseFloat(opt.dataset.valor)||0) * (parseInt(qty.value)||1);
       }
     }
   });
   const el = document.getElementById('totalVal');
-  if (temADefinir) {
-    el.textContent = 'Parcialmente a definir';
-    el.style.fontSize = '16px';
+  const aviso = document.getElementById('avisoConsulta');
+  if (temADefinir && total === 0) {
+    el.textContent = 'A consultar';
+    el.style.fontSize = '20px';
+    el.style.color = '#f59e0b';
+    aviso.style.display = 'flex';
+  } else if (temADefinir) {
+    el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' + consulta';
+    el.style.fontSize = '18px';
+    el.style.color = '#f59e0b';
+    aviso.style.display = 'flex';
   } else {
     el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
     el.style.fontSize = '';
+    el.style.color = '';
+    aviso.style.display = 'none';
   }
 }
 
