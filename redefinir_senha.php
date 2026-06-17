@@ -76,5 +76,6 @@ if (!isset($erro_fatal) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
   </div>
 </div>
+<script src="js/nav.js"></script>
 </body>
 </html>

@@ -43,5 +43,6 @@ $home   = $logado
   <p>A página que você tentou acessar não existe ou foi removida. Volte para o início e continue navegando.</p>
   <a href="<?= $home ?>" class="btn btn-primary btn-lg">← Voltar ao início</a>
 </div>
+<script src="js/nav.js"></script>
 </body>
 </html>

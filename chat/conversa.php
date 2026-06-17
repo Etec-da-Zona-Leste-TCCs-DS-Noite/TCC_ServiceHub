@@ -59,6 +59,7 @@ $mensagens = $msgs->fetchAll();
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Chat com <?= htmlspecialchars($outro_nome) ?> — ServiceHub</title>
   <link rel="stylesheet" href="../css/estilo.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     /* ── Layout do chat ── */
     body { display:flex; flex-direction:column; min-height:100vh; }
@@ -347,5 +348,6 @@ window.addEventListener('beforeunload', () => {
 // Guardar inicial do usuário logado para os balões
 msgInput.dataset.meInit = '<?= $is_cliente ? strtoupper(substr($_SESSION['cliente_nome'],0,1)) : strtoupper(substr($_SESSION['empresa_nome'],0,1)) ?>';
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>

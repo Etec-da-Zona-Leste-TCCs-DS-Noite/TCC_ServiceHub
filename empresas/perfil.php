@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServiceHub - Perfil da Empresa</title>
     <link rel="stylesheet" href="../css/estilo.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         .page-header {
             background: linear-gradient(135deg, #1a4a6f 0%, #0a2b3e 100%);
@@ -320,5 +320,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn-save"><i class="fas fa-save"></i> Salvar Alterações</button>
         </form>
     </div>
+<script src="../js/nav.js"></script>
 </body>
 </html>

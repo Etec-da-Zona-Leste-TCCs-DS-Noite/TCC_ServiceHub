@@ -71,6 +71,7 @@ $itensJS    = json_encode(array_map(fn($it)=>['id'=>$it['servico_id'],'qty'=>$it
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Editar Orçamento #<?=$id?> — ServiceHub</title>
   <link rel="stylesheet" href="../css/estilo.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     .item-row {
       background: #f8fafc; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -220,5 +221,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   else addRow();
 });
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>

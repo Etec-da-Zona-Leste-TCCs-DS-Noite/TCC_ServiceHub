@@ -45,7 +45,7 @@ $empresasJson = json_encode(array_values(array_map(fn($e) => [
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ServiceHub — Mapa de Empresas</title>
 <link rel="stylesheet" href="../css/estilo.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <!-- Leaflet.js — mapa gratuito sem API key -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -530,5 +530,6 @@ if (EMPRESAS.length > 0) {
     map.fitBounds(bounds, { padding: [40, 40] });
 }
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>

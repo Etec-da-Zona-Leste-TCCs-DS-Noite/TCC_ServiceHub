@@ -40,7 +40,7 @@ $categorias = $pdo->query(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServiceHub - Empresas</title>
     <link rel="stylesheet" href="../css/estilo.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         .navbar {
             background: linear-gradient(135deg, #1a4a6f 0%, #0a2b3e 100%);
@@ -234,5 +234,6 @@ $categorias = $pdo->query(
     </div>
     <?php endif; ?>
 </div>
+<script src="../js/nav.js"></script>
 </body>
 </html>

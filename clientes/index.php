@@ -132,5 +132,6 @@ $clientes = $stmt->fetchAll();
 <footer style="background:var(--navy);color:var(--slate);text-align:center;padding:20px;margin-top:48px;font-size:13px;">
   © <?= date('Y') ?> ServiceHub — Todos os direitos reservados.
 </footer>
+<script src="../js/nav.js"></script>
 </body>
 </html>

@@ -27,30 +27,6 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Painel da Empresa — ServiceHub</title>
   <link rel="stylesheet" href="css/estilo.css">
-  <style>
-    .dash-nav { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%);border-bottom:1px solid rgba(201,168,76,.2);position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(13,27,42,.3); }
-    .dash-nav .inner { max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:64px;flex-wrap:wrap;gap:12px; }
-    .nav-items { display:flex;gap:4px;flex-wrap:wrap;align-items:center; }
-    .nav-items a { color:var(--slate-lt);font-size:13px;font-weight:500;padding:7px 13px;border-radius:var(--radius-sm);transition:all var(--transition); }
-    .nav-items a:hover { color:#fff;background:rgba(201,168,76,.18); }
-    .welcome-banner { background:linear-gradient(135deg,var(--navy) 0%,var(--navy-soft) 100%);color:#fff;border-radius:var(--radius);padding:28px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;border:1px solid rgba(201,168,76,.15); }
-    .welcome-banner h1 { font-size:22px;margin-bottom:4px; }
-    .welcome-banner p  { color:var(--slate);font-size:14px; }
-    .quick-actions { display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:32px; }
-    .qa-card { background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;text-decoration:none;color:var(--text);transition:all var(--transition); }
-    .qa-card:hover { transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--gold); }
-    .qa-icon { font-size:28px;display:block;margin-bottom:8px; }
-    .qa-card strong { display:block;font-size:13px;margin-bottom:3px; }
-    .qa-card small { font-size:11px;color:var(--text-muted); }
-    .section-heading { font-size:18px;margin-bottom:16px;border-left:3px solid var(--gold);padding-left:12px; }
-    .two-col { display:grid;grid-template-columns:1fr 1fr;gap:24px; }
-    .pop-item { display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border); }
-    .pop-item:last-child { border-bottom:none; }
-    .pop-badge { background:var(--gold-dim);color:#78530a;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700; }
-    .user-chip { display:flex;align-items:center;gap:10px; }
-    .avatar { width:36px;height:36px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--navy);font-size:14px;flex-shrink:0; }
-    @media(max-width:768px){.two-col{grid-template-columns:1fr;}.welcome-banner{flex-direction:column;}}
-  </style>
 </head>
 <body>
 <nav class="dash-nav">
@@ -63,8 +39,8 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <a href="empresas/perfil.php">Perfil</a>
       <a href="clientes/index.php">Clientes</a>
       <a href="orcamentos/index.php?empresa=<?=$eid?>">Orçamentos</a>
-      <a href="avaliacoes/index.php">⭐ Avaliações</a>
-      <a href="chat/index.php" id="navChat">💬 Mensagens</a>
+      <a href="avaliacoes/index.php"><i class="far fa-star"></i> Avaliações</a>
+      <a href="chat/index.php" id="navChat"><i class="far fa-comment-dots"></i> Mensagens</a>
       <div class="user-chip">
         <div class="avatar"><?= strtoupper(substr($_SESSION['empresa_nome'],0,1)) ?></div>
         <span style="color:#fff;font-size:13px;"><?= htmlspecialchars($_SESSION['empresa_nome']) ?></span>
@@ -85,7 +61,7 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-icon">📋</div>
+      <div class="stat-icon"><i class="far fa-clipboard"></i></div>
       <div class="stat-number"><?=$totalServ?></div>
       <div class="stat-label">Serviços ativos</div>
     </div>
@@ -95,17 +71,17 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <div class="stat-label">Orçamentos recebidos</div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon">✅</div>
+      <div class="stat-icon"><i class="far fa-check-circle"></i></div>
       <div class="stat-number"><?=$totalAprov?></div>
       <div class="stat-label">Orçamentos aprovados</div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon">💰</div>
+      <div class="stat-icon"><i class="far fa-money-bill-alt"></i></div>
       <div class="stat-number"><?= formatMoney($fat) ?></div>
       <div class="stat-label">Faturamento total</div>
     </div>
     <div class="stat-card" style="border-top:3px solid var(--gold);">
-      <div class="stat-icon">⭐</div>
+      <div class="stat-icon"><i class="far fa-star"></i></div>
       <div class="stat-number" style="color:var(--gold);">
         <?= $avalDados['total'] > 0 ? number_format($avalDados['media'],1,',','') : '—' ?>
       </div>
@@ -127,13 +103,13 @@ $popStmt->execute([$eid]); $populares=$popStmt->fetchAll();
       <span class="qa-icon">🗂</span><strong>Gerenciar Serviços</strong><small>Editar ou remover</small>
     </a>
     <a href="empresas/perfil.php" class="qa-card">
-      <span class="qa-icon">🏢</span><strong>Editar Perfil</strong><small>Atualizar dados</small>
+      <span class="qa-icon"><i class="far fa-building"></i></span><strong>Editar Perfil</strong><small>Atualizar dados</small>
     </a>
     <a href="orcamentos/index.php?empresa=<?=$eid?>" class="qa-card">
-      <span class="qa-icon">📊</span><strong>Ver Orçamentos</strong><small>Acompanhar solicitações</small>
+      <span class="qa-icon"><i class="far fa-chart-bar"></i></span><strong>Ver Orçamentos</strong><small>Acompanhar solicitações</small>
     </a>
     <a href="relatorios/index.php" class="qa-card">
-      <span class="qa-icon">📈</span><strong>Relatórios</strong><small>Análises e métricas</small>
+      <span class="qa-icon"><i class="far fa-chart-bar"></i></span><strong>Relatórios</strong><small>Análises e métricas</small>
     </a>
   </div>
 
@@ -204,11 +180,12 @@ document.querySelectorAll('form').forEach(f => {
     .then(r => r.json())
     .then(d => {
       const el = document.getElementById('navChat');
-      if (el) el.innerHTML = '💬 Mensagens' + (d.count > 0 ? ` <span style="background:#c9a84c;color:#0d1b2a;border-radius:100px;font-size:11px;font-weight:700;padding:1px 7px;">${d.count}</span>` : '');
+      if (el) el.innerHTML = '<i class="far fa-comment-dots"></i> Mensagens' + (d.count > 0 ? ` <span style="background:#c9a84c;color:#0d1b2a;border-radius:100px;font-size:11px;font-weight:700;padding:1px 7px;">${d.count}</span>` : '');
     })
     .catch(() => {});
   setTimeout(pollUnread, 10000);
 })();
 </script>
+<script src="js/nav.js"></script>
 </body>
 </html>

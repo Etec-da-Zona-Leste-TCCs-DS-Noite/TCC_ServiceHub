@@ -126,7 +126,7 @@ $msg = $_GET['msg'] ?? '';
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Meus Serviços — ServiceHub</title>
 <link rel="stylesheet" href="../css/estilo.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 /* ── Reset / base ───────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -373,8 +373,8 @@ tbody tr:last-child td { border-bottom: none; }
       <a href="meus_servicos.php" class="active">Meus Serviços</a>
       <a href="perfil.php">Perfil</a>
       <a href="../orcamentos/index.php">Orçamentos</a>
-      <a href="../avaliacoes/index.php">⭐ Avaliações</a>
-      <a href="../chat/index.php">💬 Mensagens</a>
+      <a href="../avaliacoes/index.php"><i class="far fa-star"></i> Avaliações</a>
+      <a href="../chat/index.php"><i class="far fa-comment-dots"></i> Mensagens</a>
     </div>
     <div class="nav-user">
       <div class="avatar"><?= strtoupper(substr($_SESSION['empresa_nome'] ?? 'E', 0, 1)) ?></div>
@@ -722,5 +722,6 @@ function fecharModal() {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>

@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServiceHub - Cadastro de Cliente</title>
     <link rel="stylesheet" href="../css/estilo.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         .auth-container {
             min-height: 100vh;
@@ -381,5 +381,6 @@ async function buscarCep() {
 document.getElementById('btnBuscarCep').addEventListener('click', buscarCep);
 inputCep.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscarCep(); } });
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>

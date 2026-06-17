@@ -143,5 +143,6 @@ function toggleValor(cb) {
   if (cb.checked) inp.value = '';
 }
 </script>
+<script src="../js/nav.js"></script>
 </body>
 </html>
