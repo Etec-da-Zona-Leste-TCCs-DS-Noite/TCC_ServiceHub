@@ -159,3 +159,7 @@ servicehub/
   - Visão global de todos os orçamentos com filtros
   - Moderação de avaliações
   - Listagem global de todos os serviços
+emails:
+vitomas2007@gmail.com
+ryan.porto1234567@gmail.com
+Gustavosantos6a.mm2020@gmail.com
