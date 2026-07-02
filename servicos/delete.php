@@ -1,11 +1,15 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/functions.php';
+require_once '../includes/bootstrap.php';
 verificarLogin();
-if (!isEmpresa()) { header('Location: ../index.php'); exit; }
-$id = (int)($_GET['id'] ?? 0);
+if (!isEmpresa()) { header('Location: ../login.php'); exit; }
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
+csrfVerify();
+
+$id = (int)($_POST['id'] ?? 0);
 if ($id) {
     $empresa_id = $_SESSION['empresa_id'];
     $stmt = $pdo->prepare("DELETE FROM servicos WHERE id=? AND empresa_id=?");

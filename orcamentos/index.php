@@ -1,8 +1,5 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/functions.php';
+require_once '../includes/bootstrap.php';
 verificarLogin();
 
 $is_cliente = isCliente();
@@ -207,8 +204,11 @@ $back_url = $is_cliente
               <a href="view.php?id=<?= $o['id'] ?>" class="btn btn-sm">Ver</a>
               <?php if ($is_empresa): ?>
               <a href="edit.php?id=<?= $o['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-              <a href="delete.php?id=<?= $o['id'] ?>" class="btn btn-sm btn-danger"
-                 onclick="return confirm('Excluir este orçamento?')">Excluir</a>
+              <form method="post" action="delete.php" style="display:inline;" onsubmit="return confirm('Excluir este orçamento?')">
+                <?= csrfField() ?>
+                <input type="hidden" name="id" value="<?= $o['id'] ?>">
+                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+              </form>
               <?php endif; ?>
             </div>
           </td>

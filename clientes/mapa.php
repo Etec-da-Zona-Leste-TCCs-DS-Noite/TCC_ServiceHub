@@ -6,7 +6,7 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 
 verificarLogin();
-if (!isCliente()) { header('Location: ../index.php'); exit; }
+if (!isCliente()) { header('Location: ../login.php'); exit; }
 
 // Busca empresas com coordenadas
 $stmt = $pdo->query("

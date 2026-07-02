@@ -10,12 +10,12 @@ require_once '../includes/oauth_config.php';
 
 if (!isset($_GET['state']) || !isset($_SESSION['oauth_state'])
     || $_GET['state'] !== $_SESSION['oauth_state']) {
-    header('Location: ../index.php?msg=Acesso+inválido&type=error'); exit;
+    header('Location: ../login.php?msg=Acesso+inválido&type=error'); exit;
 }
 unset($_SESSION['oauth_state']);
 
 if (!isset($_GET['code'])) {
-    header('Location: ../index.php?msg=Autenticação+cancelada&type=error'); exit;
+    header('Location: ../login.php?msg=Autenticação+cancelada&type=error'); exit;
 }
 
 // ── Troca code por access_token ──────────────────────────────
@@ -34,7 +34,7 @@ $tokenResp = file_get_contents('https://github.com/login/oauth/access_token', fa
 
 $token = json_decode($tokenResp, true);
 if (empty($token['access_token'])) {
-    header('Location: ../index.php?msg=Falha+ao+obter+token+GitHub&type=error'); exit;
+    header('Location: ../login.php?msg=Falha+ao+obter+token+GitHub&type=error'); exit;
 }
 
 // ── Obtém dados do usuário ───────────────────────────────────
@@ -56,7 +56,7 @@ if (empty($gu['email'])) {
 }
 
 if (empty($gu['email'])) {
-    header('Location: ../index.php?msg=Não+foi+possível+obter+o+e-mail+do+GitHub&type=error'); exit;
+    header('Location: ../login.php?msg=Não+foi+possível+obter+o+e-mail+do+GitHub&type=error'); exit;
 }
 
 $email  = strtolower(trim($gu['email']));
@@ -72,7 +72,9 @@ if ($tipo === 'cliente') {
     if (!$user) {
         $pdo->prepare("INSERT INTO clientes (nome, email, senha, created_at) VALUES (?,?,?,NOW())")
             ->execute([$nome, $email, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT)]);
-        $user = $pdo->query("SELECT * FROM clientes WHERE email=" . $pdo->quote($email))->fetch();
+        $stmt = $pdo->prepare("SELECT * FROM clientes WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
     }
     $_SESSION['cliente_id']    = $user['id'];
     $_SESSION['cliente_nome']  = $user['nome'];
@@ -87,7 +89,7 @@ if ($tipo === 'cliente') {
     if (!$user) {
         $pdo->prepare("INSERT INTO empresas (nome_empresa, email, senha, status, created_at) VALUES (?,?,?,1,NOW())")
             ->execute([$nome, $email, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT)]);
-        $user = $pdo->query("SELECT * FROM empresas WHERE email=" . $pdo->quote($email))->fetch();
+        $stmt = $pdo->prepare("SELECT * FROM empresas WHERE email = ?"); $stmt->execute([$email]); $user = $stmt->fetch();
     }
     $_SESSION['empresa_id']    = $user['id'];
     $_SESSION['empresa_nome']  = $user['nome_empresa'];

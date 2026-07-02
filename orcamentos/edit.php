@@ -4,7 +4,7 @@ require_once '../includes/config.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 verificarLogin();
-if (!isEmpresa()) { header('Location: ../index.php'); exit; }
+if (!isEmpresa()) { header('Location: ../login.php'); exit; }
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header('Location: index.php'); exit; }

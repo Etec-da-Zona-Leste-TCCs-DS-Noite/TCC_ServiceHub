@@ -1,16 +1,14 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/functions.php';
-require_once '../includes/auth.php';
+require_once '../includes/bootstrap.php';
 
 verificarLogin();
-if (!isEmpresa()) { header('Location: ../index.php'); exit; }
+if (!isEmpresa()) { header('Location: ../login.php'); exit; }
 
 $eid = (int)$_SESSION['empresa_id'];
 
 // ── Atualizar status de um orçamento ─────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_status'])) {
+    csrfVerify();
     $orc_id    = (int)$_POST['orc_id'];
     $novoStatus = $_POST['novo_status'] ?? '';
     $allowed    = ['aprovado', 'concluido', 'rejeitado', 'pendente'];
@@ -570,6 +568,7 @@ tbody tr:last-child td { border-bottom: none; }
               <!-- Ações de status -->
               <?php if ($h['status'] === 'pendente'): ?>
                 <form method="post" style="display:inline">
+                  <?= csrfField() ?>
                   <input type="hidden" name="orc_id" value="<?= $h['id'] ?>">
                   <input type="hidden" name="novo_status" value="aprovado">
                   <input type="hidden" name="filtro_atual" value="<?= htmlspecialchars($filtro) ?>">
@@ -579,6 +578,7 @@ tbody tr:last-child td { border-bottom: none; }
                   </button>
                 </form>
                 <form method="post" style="display:inline">
+                  <?= csrfField() ?>
                   <input type="hidden" name="orc_id" value="<?= $h['id'] ?>">
                   <input type="hidden" name="novo_status" value="rejeitado">
                   <input type="hidden" name="filtro_atual" value="<?= htmlspecialchars($filtro) ?>">
@@ -589,6 +589,7 @@ tbody tr:last-child td { border-bottom: none; }
                 </form>
               <?php elseif ($h['status'] === 'aprovado'): ?>
                 <form method="post" style="display:inline">
+                  <?= csrfField() ?>
                   <input type="hidden" name="orc_id" value="<?= $h['id'] ?>">
                   <input type="hidden" name="novo_status" value="concluido">
                   <input type="hidden" name="filtro_atual" value="<?= htmlspecialchars($filtro) ?>">

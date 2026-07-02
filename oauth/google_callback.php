@@ -11,14 +11,14 @@ require_once '../includes/oauth_config.php';
 // ── Valida state (proteção CSRF) ─────────────────────────────
 if (!isset($_GET['state']) || !isset($_SESSION['oauth_state'])
     || $_GET['state'] !== $_SESSION['oauth_state']) {
-    header('Location: ../index.php?msg=Acesso+inválido&type=error');
+    header('Location: ../login.php?msg=Acesso+inválido&type=error');
     exit;
 }
 unset($_SESSION['oauth_state']);
 
 // ── Troca code por access_token ──────────────────────────────
 if (!isset($_GET['code'])) {
-    header('Location: ../index.php?msg=Autenticação+cancelada&type=error');
+    header('Location: ../login.php?msg=Autenticação+cancelada&type=error');
     exit;
 }
 
@@ -38,7 +38,7 @@ $tokenResp = file_get_contents('https://oauth2.googleapis.com/token', false,
 
 $token = json_decode($tokenResp, true);
 if (empty($token['access_token'])) {
-    header('Location: ../index.php?msg=Falha+ao+obter+token&type=error');
+    header('Location: ../login.php?msg=Falha+ao+obter+token&type=error');
     exit;
 }
 
@@ -51,7 +51,7 @@ $userResp = file_get_contents('https://www.googleapis.com/oauth2/v3/userinfo', f
 
 $gu = json_decode($userResp, true);
 if (empty($gu['email'])) {
-    header('Location: ../index.php?msg=Não+foi+possível+obter+o+e-mail&type=error');
+    header('Location: ../login.php?msg=Não+foi+possível+obter+o+e-mail&type=error');
     exit;
 }
 
@@ -71,7 +71,7 @@ if ($tipo === 'cliente') {
         $pdo->prepare("INSERT INTO clientes (nome, email, senha, created_at)
                         VALUES (?, ?, ?, NOW())")
             ->execute([$nome, $email, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT)]);
-        $user = $pdo->query("SELECT * FROM clientes WHERE email = " . $pdo->quote($email))->fetch();
+        $stmt = $pdo->prepare("SELECT * FROM clientes WHERE email = ?"); $stmt->execute([$email]); $user = $stmt->fetch();
     }
 
     $_SESSION['cliente_id']    = $user['id'];
@@ -91,7 +91,9 @@ if ($tipo === 'cliente') {
         $pdo->prepare("INSERT INTO empresas (nome_empresa, email, senha, status, created_at)
                         VALUES (?, ?, ?, 1, NOW())")
             ->execute([$nome, $email, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT)]);
-        $user = $pdo->query("SELECT * FROM empresas WHERE email = " . $pdo->quote($email))->fetch();
+        $stmt = $pdo->prepare("SELECT * FROM empresas WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
     }
 
     $_SESSION['empresa_id']    = $user['id'];

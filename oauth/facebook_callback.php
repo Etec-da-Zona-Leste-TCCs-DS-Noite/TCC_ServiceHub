@@ -12,19 +12,19 @@ require_once '../includes/oauth_config.php';
 // ── Valida state (proteção CSRF) ─────────────────────────────
 if (!isset($_GET['state']) || !isset($_SESSION['oauth_state'])
     || $_GET['state'] !== $_SESSION['oauth_state']) {
-    header('Location: ../index.php?msg=Acesso+inválido&type=error');
+    header('Location: ../login.php?msg=Acesso+inválido&type=error');
     exit;
 }
 unset($_SESSION['oauth_state']);
 
 // ── Usuário cancelou ─────────────────────────────────────────
 if (isset($_GET['error'])) {
-    header('Location: ../index.php?msg=Login+cancelado&type=error');
+    header('Location: ../login.php?msg=Login+cancelado&type=error');
     exit;
 }
 
 if (!isset($_GET['code'])) {
-    header('Location: ../index.php?msg=Código+não+recebido&type=error');
+    header('Location: ../login.php?msg=Código+não+recebido&type=error');
     exit;
 }
 
@@ -41,7 +41,7 @@ $tokenResp = file_get_contents($tokenUrl);
 $token     = json_decode($tokenResp, true);
 
 if (empty($token['access_token'])) {
-    header('Location: ../index.php?msg=Falha+ao+obter+token+Facebook&type=error');
+    header('Location: ../login.php?msg=Falha+ao+obter+token+Facebook&type=error');
     exit;
 }
 

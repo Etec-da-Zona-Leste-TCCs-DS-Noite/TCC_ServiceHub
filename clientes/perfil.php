@@ -5,7 +5,7 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 verificarLogin();
 
-if (!isCliente()) { header('Location: ../index.php'); exit; }
+if (!isCliente()) { header('Location: ../login.php'); exit; }
 
 $cid = $_SESSION['cliente_id'];
 $stmt = $pdo->prepare("SELECT * FROM clientes WHERE id = ?");

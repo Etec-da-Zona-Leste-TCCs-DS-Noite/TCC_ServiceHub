@@ -39,7 +39,7 @@ switch ($provider) {
         break;
 
     default:
-        header('Location: ../index.php?msg=Provedor+inválido&type=error');
+        header('Location: ../login.php?msg=Provedor+inválido&type=error');
         exit;
 }
 

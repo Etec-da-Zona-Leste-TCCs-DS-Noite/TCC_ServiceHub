@@ -56,7 +56,7 @@ if (!isset($erro_fatal) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php elseif ($success): ?>
       <div class="success-msg">✓ Senha alterada com sucesso! Faça login com sua nova senha.</div>
-      <a href="index.php" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">Ir para o Login</a>
+      <a href="login.php" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">Ir para o Login</a>
 
     <?php else: ?>
       <form method="post">
@@ -72,7 +72,7 @@ if (!isset($erro_fatal) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button type="submit" class="btn-auth">Salvar Nova Senha</button>
       </form>
-      <div class="auth-link" style="margin-top:20px;"><a href="index.php">← Cancelar</a></div>
+      <div class="auth-link" style="margin-top:20px;"><a href="login.php">← Cancelar</a></div>
     <?php endif; ?>
   </div>
 </div>

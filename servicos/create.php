@@ -4,7 +4,7 @@ require_once '../includes/config.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 verificarLogin();
-if (!isEmpresa()) { header('Location: ../index.php'); exit; }
+if (!isEmpresa()) { header('Location: ../login.php'); exit; }
 
 $erros = []; $nome=$descricao=$categoria=''; $valor=''; $duracao_estimada=''; $status=1; $valor_a_definir=false;
 

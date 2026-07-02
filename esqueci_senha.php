@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <div class="auth-link" style="margin-top:20px;">
-      <a href="index.php">← Voltar ao login</a>
+      <a href="login.php">← Voltar ao login</a>
     </div>
   </div>
 </div>

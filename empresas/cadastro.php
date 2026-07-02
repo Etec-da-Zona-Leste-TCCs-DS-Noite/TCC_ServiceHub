@@ -1,8 +1,5 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/functions.php';
+require_once '../includes/bootstrap.php';
 
 // Redireciona se já estiver logado
 if (isset($_SESSION['tipo_usuario'])) {
@@ -11,6 +8,7 @@ if (isset($_SESSION['tipo_usuario'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfVerify();
     $nome_empresa    = cleanInput($_POST['nome_empresa']    ?? '');
     $email           = cleanInput($_POST['email']           ?? '');
     $senha           = $_POST['senha']            ?? '';
@@ -77,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         if ($stmt->execute([$nome_empresa, $email, $senha_hash, $cnpj, $telefone, $endereco, $descricao, $site, $geo_lat, $geo_lng])) {
-            header('Location: ../index.php?msg=' . urlencode('Empresa cadastrada com sucesso! Faça login.') . '&type=success');
+            header('Location: ../login.php?msg=' . urlencode('Empresa cadastrada com sucesso! Faça login.') . '&type=success');
             exit;
         } else {
             $erros['geral'] = 'Erro ao cadastrar. Tente novamente.';
@@ -175,6 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="post">
+          <?= csrfField() ?>
 
             <!-- DADOS DA EMPRESA -->
             <div class="section-title"><i class="fas fa-building"></i>&nbsp; Dados da Empresa</div>
@@ -312,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
 
             <div class="register-link">
-                Já tem uma conta? <a href="../index.php">Faça login</a>
+                Já tem uma conta? <a href="../login.php">Faça login</a>
             </div>
         </form>
     </div>

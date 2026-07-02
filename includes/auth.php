@@ -2,6 +2,41 @@
 // includes/auth.php
 // NOTA: session_start() NÃO deve ficar aqui — já é chamado nos arquivos que o incluem.
 
+const LOGIN_MAX_TENTATIVAS = 5;
+const LOGIN_BLOQUEIO_SEGUNDOS = 60;
+
+/**
+ * Freio simples de força bruta por sessão + e-mail: após LOGIN_MAX_TENTATIVAS
+ * falhas seguidas, bloqueia novas tentativas por LOGIN_BLOQUEIO_SEGUNDOS.
+ */
+function loginLiberado($email) {
+    $chave = 'login_falhas_' . md5(strtolower(trim($email)));
+    $dados = $_SESSION[$chave] ?? ['tentativas' => 0, 'bloqueado_ate' => 0];
+    return $dados['bloqueado_ate'] <= time();
+}
+
+function registrarFalhaLogin($email) {
+    $chave = 'login_falhas_' . md5(strtolower(trim($email)));
+    $dados = $_SESSION[$chave] ?? ['tentativas' => 0, 'bloqueado_ate' => 0];
+    $dados['tentativas']++;
+    if ($dados['tentativas'] >= LOGIN_MAX_TENTATIVAS) {
+        $dados['bloqueado_ate'] = time() + LOGIN_BLOQUEIO_SEGUNDOS;
+        $dados['tentativas'] = 0;
+    }
+    $_SESSION[$chave] = $dados;
+}
+
+function limparFalhasLogin($email) {
+    unset($_SESSION['login_falhas_' . md5(strtolower(trim($email)))]);
+}
+
+function segundosRestantesBloqueio($email) {
+    $chave = 'login_falhas_' . md5(strtolower(trim($email)));
+    $dados = $_SESSION[$chave] ?? null;
+    if (!$dados) return 0;
+    return max(0, $dados['bloqueado_ate'] - time());
+}
+
 function loginCliente($email, $senha, $pdo) {
     $stmt = $pdo->prepare("SELECT * FROM clientes WHERE email = ?");
     $stmt->execute([$email]);
@@ -59,7 +94,7 @@ function verificarLogin() {
         $scriptDir = trim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
         $depth     = ($scriptDir === '' || $scriptDir === '.') ? 0 : substr_count($scriptDir, '/') + 1;
         $prefix    = $depth > 0 ? str_repeat('../', $depth) : '';
-        header('Location: ' . $prefix . 'index.php');
+        header('Location: ' . $prefix . 'login.php');
         exit;
     }
 }

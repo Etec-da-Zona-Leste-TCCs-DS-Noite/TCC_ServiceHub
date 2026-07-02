@@ -5,7 +5,7 @@ require_once '../includes/config.php';
 require_once '../includes/auth.php';
 verificarLogin();
 
-if (!isCliente()) { header('Location: ../index.php'); exit; }
+if (!isCliente()) { header('Location: ../login.php'); exit; }
 
 $cid        = $_SESSION['cliente_id'];
 $empresa_id = (int)($_GET['empresa_id']   ?? $_POST['empresa_id']  ?? 0);

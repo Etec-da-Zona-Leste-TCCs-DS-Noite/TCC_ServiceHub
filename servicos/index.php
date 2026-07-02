@@ -1,10 +1,7 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/auth.php';
-require_once '../includes/functions.php';
+require_once '../includes/bootstrap.php';
 verificarLogin();
-if (!isEmpresa()) { header('Location: ../index.php'); exit; }
+if (!isEmpresa()) { header('Location: ../login.php'); exit; }
 
 $page   = max(1, (int)($_GET['page'] ?? 1));
 $limit  = 10;
@@ -104,7 +101,11 @@ $categorias = $categorias->fetchAll(PDO::FETCH_COLUMN);
           <td>
             <div style="display:flex;gap:6px;">
               <a href="edit.php?id=<?= $s['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-              <a href="delete.php?id=<?= $s['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Excluir este serviço?')">Excluir</a>
+              <form method="post" action="delete.php" style="display:inline;" onsubmit="return confirm('Excluir este serviço?')">
+                <?= csrfField() ?>
+                <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+              </form>
             </div>
           </td>
         </tr>
